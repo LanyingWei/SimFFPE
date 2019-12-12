@@ -1,0 +1,15 @@
+Package: SimFFPE
+Type: Package
+Title: NGS Read Simulator for FFPE Tissue
+Version: 0.99.0
+Author: Lanying Wei
+Maintainer: Lanying Wei <lanying.wei@uni-muenster.de>
+Description: This package simulates artifact chimeric reads specifically generated 
+    in next-generation sequencing (NGS) process of formalin-fixed paraffin-embedded 
+    (FFPE) tissue.
+License: LGPL-3
+Encoding: UTF-8
+Depends: Biostrings, data.table
+Imports: dplyr, foreach, doParallel, truncnorm, GenomicRanges, IRanges, Rsamtools, parallel, graphics, stats, utils
+Suggests: BiocStyle
+biocViews: Sequencing, Alignment, MultipleComparison, SequenceMatching, DataImport

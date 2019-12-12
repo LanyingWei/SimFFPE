@@ -1,0 +1,213 @@
+%\VignetteIndexEntry{An introduction to SimFFPE}
+%\VignetteDepends{}
+%\VignetteKeywords{Read Simulation, FFPE tissue, NGS}
+%\VignettePackage{SimFFPE}
+\documentclass{article}
+
+<<style, echo=FALSE, results=tex>>=
+BiocStyle::latex()
+@
+
+\title{An Introduction to \Biocpkg{SimFFPE}}
+\author{Lanying Wei}
+\date{Modified: 12 December, 2019. Compiled: \today}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\maketitle
+
+\tableofcontents
+
+<<options, echo=FALSE>>=
+options(width=60)
+@
+\newcommand{\bam}{\texttt{BAM}}
+\newcommand{\fasta}{\texttt{FASTA}}
+\newcommand{\phred}{\texttt{Phred score profile}}
+
+\section{Introduction}
+
+The NGS (Next-Generation Sequencing) reads from FFPE
+(Formalin-Fixed Paraffin-Embedded) samples contain numerous artificial chimeric
+reads. These reads are derived from the combination of two single-stranded DNA
+fragments with short reverse complementary sequences from nearby or distant
+regions. The \Biocpkg{SimFFPE} package simulates these artifacts as well as
+normal reads for FFPE samples. The simulation can cover whole genome, or several
+chromosomes, or large regions, or whole exome, or targeted regions. It also
+supports enzymatic / random fragmentation and paired-end / single-end sequencing
+simulations. Fine-tuning can be performed for desired simulation results, and
+multi-threading can help reduce the runtime.
+
+\section{Input}
+
+The essential inputs for the simulation include a \fasta{} file of the reference
+genome, a \phred{} to simulate Phred scores based on the position on the reads,
+and a table of target regions (optional). The \phred{} can be estimated from
+existing \bam{} files using \Rfunction{estimateSimParam} function (two available
+examples for \phred{} are stored in the 'extdata' directory of
+\Biocpkg{SimFFPE} package). The \Rfunction{estimateSimParam} also show messages
+about some other basic statistics as read length, median / MAD of insert length
+and some FFPE-related statistics. Additional information can be found on the
+help page for \Rfunction{estimateSimParam}.
+
+<<estimateSimParam>>=
+library(SimFFPE)
+bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
+PhredScoreProfile <- estimateSimParam(bamFilePath1)
+
+## Example Phred score profile with 150 read length
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
+                                     package = "SimFFPE")
+PhredScoreProfile1 <- fread(PhredScoreProfilePath)
+
+## Example Phred score profile with 100 read length
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
+                                     package = "SimFFPE")
+PhredScoreProfile2 <- fread(PhredScoreProfilePath)
+
+@
+
+The \fasta{} file of reference genome should be read in as \Rclass{DNAStringSet}
+with \Rfunction{readDNAStringSet} function from \Biocpkg{Biostrings} package.
+<<readDNAStringSet>>=
+referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
+reference <- readDNAStringSet(referencePath)
+reference
+
+@
+%%
+To simulate reads of certain regions, the target regions are required (not
+required when simulating reads on the whole genome / several chromosomes /
+large regions). The table representing the target regions should have three
+columns, which indicate chromosomes, start positions and end positions
+respectively (one-based coordinate).
+<<target region table>>=
+regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
+targetRegions <- fread(regionPath)
+@
+%%
+
+\section{Simulation}
+
+The simulation includes three steps: 1. Simulate artifact chimeric reads
+derived from the combination of two DNA segments from nearby regions (nearby
+regions on the same chromosome). 2. Simulate artifact chimeric reads derived
+from the combination of two DNA segments from distant regions (distant regions
+on the same chromosome, or any regions on different chromosomes). 3. Simulate
+reads derived from normal sequences. You can also skip any steps in the
+simulation. There are two functions which can be used for the simulation:
+\Rfunction{readSimFFPE} and \Rfunction{targetReadSimFFPE}.
+
+\subsection{Read simulation functions}
+
+To simulate reads on whole genome, or several chromosomes, or large regions,
+please use the \Rfunction{readSimFFPE} function:
+<<readSimFFPE>>=
+## Simulate reads of the first three sequences of the reference genome
+
+sourceSeq <- reference[1:3]
+outFile1 <- paste0(tempdir(), "/sim1")
+readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1,
+            overWrite = TRUE, coverage = 80, readLen = 150,
+            meanInsertLen = 250, sdInsertLen = 80,
+            enzymeCut = TRUE, threads = 2)
+
+
+## Simulate reads of defined regions on the first two sequences of the reference
+## genome
+
+sourceSeq2 <- DNAStringSet(lapply(reference[1:2], function(x) x[1:10000]))
+outFile2 <- paste0(tempdir(), "/sim2")
+readSimFFPE(sourceSeq2, reference, PhredScoreProfile, outFile2,
+            overWrite = TRUE, coverage = 80, readLen = 150,
+            meanInsertLen = 250, sdInsertLen = 80, enzymeCut = TRUE)
+
+@
+%%
+
+To simulate reads on whole exome or targeted regions please use the
+\Rfunction{targetReadSimFFPE} function:
+<<targetReadSimFFPE>>=
+
+outFile <- paste0(tempdir(), "/sim3")
+targetReadSimFFPE(reference, PhredScoreProfile2, targetRegions, outFile,
+coverage = 120, readLen = 100, meanInsertLen = 150, sdInsertLen = 40,
+enzymeCut = FALSE)
+
+@
+%%
+Additional information can be found on the help pages for the
+\Rfunction{readSimFFPE} function and the \Rfunction{targetReadSimFFPE} function.
+
+\subsection{Fine-tuning of the simulation}
+Fine-tuning of the simulation is achievable by the adjustments of some
+parameters of the function \Rfunction{readSimFFPE} and
+\Rfunction{targetReadSimFFPE}. You can simulate reads in smaller regions during
+fine-tuning to save the runtime. To illustrate the impact of some of these
+parameters, screenshots from IGV tools are used (see Figure \ref{fig:1},
+\ref{fig:2} and \ref{fig:3}). These parameters include:
+
+1) enzymeCut: Simulate enzymatic fragmentation. With this fragmentation method,
+read pairs with improper pair orientations might be mapped to the exactly same
+location on the reference genome (see Figure \ref{fig:1}).
+
+2) covRatioFFPE: Proportion of reads generated from artifact chimeric sequences.
+The higher the value, the greater the proportion of improper paired reads as
+shown in Figure \ref{fig:1} and \ref{fig:2}, the smaller the proportion of
+proper paired reads as shown in Figure \ref{fig:3}, and the larger the
+proportion of proper paired reads with soft-clips as shown in Figure
+\ref{fig:3}.
+
+3) localMatchRatio: Proportion of chimeric reads that are formed by the
+combination of two nearby DNA fragments. The higher the value, the greater the
+proportion of reads with improper pair orientations as shown in Figure
+\ref{fig:1}, and the smaller the proportion of reads with paired reads mapped to
+other chromosomes as shown in Figure \ref{fig:2}.
+
+4) revChimericProb: The probability of local-chimeric sequences to be generated
+through the combination of a DNA fragment and its duplicate in reverse
+direction. The higher the value, the greater the proportion of reads with RR and
+LL orientations over all reads with improper pair orientations as shown in
+Figure \ref{fig:1}.
+
+5) spikeWidth: The width of chimeric read spike used in the simulation of the
+combination of distant DNA fragments. As is shown in Figure \ref{fig:3}, some
+regions are enriched in reads with paired reads mapped to other chromosomes,
+and some are not. The length of these regions are of similar scale, and the
+parameter spikeWidth is used to simulate this length.
+
+6) highNoiseRate and highNoiseProb: The noise rate for each base in and the
+proportion of very noisy reads. These very noisy reads as well as less noisy
+reads are shown in Figure \ref{fig:3}.
+
+
+\begin{figure*}
+  \includegraphics[width=1\textwidth]{./ex1.png}
+  \caption{\label{fig:1} Simulated reads with improper pair orientations.
+  These read pairs are mapped in RR, LL, or RL orientations. Black-framed reads
+  are paired reads that are mapped to the same position (enzymatic
+  fragmentation).}
+\end{figure*}
+
+\begin{figure*}
+  \includegraphics[width=1\textwidth]{./ex2.png}
+  \caption{\label{fig:2} Simulated reads with paired reads mapped to other
+  chromosomes. The different read colors indicate the different mapped
+  chromosomes of their paired reads.}
+\end{figure*}
+
+\begin{figure*}
+  \includegraphics[width=1\textwidth]{./ex3.png}
+  \caption{\label{fig:3} Simulated reads mapped in proper pair. Mismatches and
+  soft-clips are shown as colored vertical lines in reads.}
+\end{figure*}
+
+\appendix
+\section{Session info}
+<<sessionInfo>>=
+packageDescription("SimFFPE")
+sessionInfo()
+@
+
+\end{document}
