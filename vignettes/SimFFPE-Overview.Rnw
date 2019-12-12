@@ -114,8 +114,8 @@ readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1,
             enzymeCut = TRUE, threads = 2)
 
 
-## Simulate reads of defined regions on the first two sequences of the reference
-## genome
+## Simulate reads of defined regions on the first two sequences of the 
+## reference genome
 
 sourceSeq2 <- DNAStringSet(lapply(reference[1:2], function(x) x[1:10000]))
 outFile2 <- paste0(tempdir(), "/sim2")
