@@ -158,8 +158,6 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
     message("Estimated proportion of supplementary alignments in reads ",
             "NOT mapped in proper pair: ",
             (sum(!isProperPaired & isSupAlign)) / sum(!isProperPaired))
-    message("Recommended proportion of FFPE chimeric reads (covRatioFFPE): ",
-            (supAlignProp * 2.5 + IPPProp * 1.5) / 2 )
     NMTable <- table(unname(unlist(readInfo[names(readInfo) == "tag"])))
     NMTable <- NMTable / sum(NMTable)
     message("Proportion of reads with N edit distance:")

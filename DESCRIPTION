@@ -1,7 +1,7 @@
 Package: SimFFPE
 Type: Package
 Title: NGS Read Simulator for FFPE Tissue
-Version: 0.99.4
+Version: 0.99.5
 Author: Lanying Wei
 Maintainer: Lanying Wei <lanying.wei@uni-muenster.de>
 Description: This package simulates artifact chimeric reads specifically generated 

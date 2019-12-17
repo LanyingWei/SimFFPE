@@ -3,13 +3,12 @@
 %\VignetteKeywords{Read Simulation, FFPE tissue, NGS}
 %\VignettePackage{SimFFPE}
 \documentclass{article}
+\begin{document}
 
 <<style, echo=FALSE, results=tex>>=
 BiocStyle::latex()
 @
 
-
-\begin{document}
 
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}

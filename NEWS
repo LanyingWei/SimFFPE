@@ -1,4 +1,7 @@
-Changes in version 0.99.3 (2019-12-17)
+Changes in version 0.99.5 (2019-12-17)
++ Remove recommendation for the parameter covRatioFFPE
++ Remove empty folder
+Changes in version 0.99.4 (2019-12-17)
 + Change the position of \begin{document} in vignette
 Changes in version 0.99.3 (2019-12-17)
 + Remove recursive folder
