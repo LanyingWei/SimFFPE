@@ -8,6 +8,9 @@
 <<style, echo=FALSE, results=tex>>=
 BiocStyle::latex()
 @
+\newcommand{\bam}{\texttt{BAM}}
+\newcommand{\fasta}{\texttt{FASTA}}
+\newcommand{\phred}{\texttt{Phred score profile}}
 
 \begin{document}
 
@@ -21,12 +24,9 @@ BiocStyle::latex()
 
 \tableofcontents
 
-<<options, echo=FALSE>>=
+<<options,echo=FALSE>>=
 options(width=60)
-@
-\newcommand{\bam}{\texttt{BAM}}
-\newcommand{\fasta}{\texttt{FASTA}}
-\newcommand{\phred}{\texttt{Phred score profile}}
+@ 
 
 \section{Introduction}
 
