@@ -164,8 +164,6 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
     NMTable <- NMTable / sum(NMTable)
     message("Proportion of reads with N edit distance:")
     message(paste0(capture.output(NMTable), collapse = "\n"))
-    plot(NMTable[4:length(NMTable)], xlab = "Edit Distance (Start From 3)",
-         ylab = "Proportion of Reads")
 
     if (calcPhredProfile) {
         qual <- do.call("c", unname(readInfo[names(readInfo) == "qual"]))

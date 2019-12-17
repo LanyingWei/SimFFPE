@@ -1,2 +1,6 @@
+Changes in version 0.99.1 (2019-12-17)
++ Remove R plot generation in the function estimateSimParam
++ Add package installation line in the vignette
 Changes in version 0.99.0 (2019-12-12)
 + Submitted to Bioconductor
+

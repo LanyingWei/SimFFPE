@@ -50,7 +50,9 @@ examples for \phred{} are stored in the 'extdata' directory of
 about some other basic statistics as read length, median / MAD of insert length
 and some FFPE-related statistics. Additional information can be found on the
 help page for \Rfunction{estimateSimParam}.
-
+<<installing,eval=FALSE>>=
+BiocManager::install("SimFFPE")
+@
 <<estimateSimParam>>=
 library(SimFFPE)
 bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
