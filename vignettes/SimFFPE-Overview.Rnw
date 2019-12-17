@@ -4,20 +4,19 @@
 %\VignettePackage{SimFFPE}
 \documentclass{article}
 
-
 <<style, echo=FALSE, results=tex>>=
 BiocStyle::latex()
 @
-
 \newcommand{\bam}{\texttt{BAM}}
 \newcommand{\fasta}{\texttt{FASTA}}
 \newcommand{\phred}{\texttt{Phred score profile}}
 
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
-\date{Modified: 17 December, 2019. Compiled: \today}
+\date{Modified: 17 December, 2019}
 
 \begin{document}
+
 \maketitle
 
 \tableofcontents
@@ -67,9 +66,7 @@ PhredScoreProfile1 <- fread(PhredScoreProfilePath)
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
 PhredScoreProfile2 <- fread(PhredScoreProfilePath)
-
 @
-
 The \fasta{} file of reference genome should be read in as \Rclass{DNAStringSet}
 with \Rfunction{readDNAStringSet} function from \Biocpkg{Biostrings} package.
 <<readDNAStringSet>>=
@@ -89,7 +86,6 @@ regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
 targetRegions <- fread(regionPath)
 @
 %%
-
 \section{Simulation}
 
 The simulation includes three steps: 1. Simulate artifact chimeric reads
@@ -127,7 +123,6 @@ readSimFFPE(sourceSeq2, reference, PhredScoreProfile, outFile2,
 
 @
 %%
-
 To simulate reads on whole exome or targeted regions please use the
 \Rfunction{targetReadSimFFPE} function:
 <<targetReadSimFFPE>>=
