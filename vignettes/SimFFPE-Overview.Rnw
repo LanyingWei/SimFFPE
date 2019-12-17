@@ -9,7 +9,6 @@ BiocStyle::latex()
 @
 \newcommand{\bam}{\texttt{BAM}}
 \newcommand{\fasta}{\texttt{FASTA}}
-\newcommand{\phred}{\texttt{Phred score profile}}
 
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
@@ -41,10 +40,10 @@ multi-threading can help reduce the runtime.
 \section{Input}
 
 The essential inputs for the simulation include a \fasta{} file of the reference
-genome, a \phred{} to simulate Phred scores based on the position on the reads,
-and a table of target regions (optional). The \phred{} can be estimated from
+genome, a Phred score profile to simulate Phred scores based on the position on the reads,
+and a table of target regions (optional). The Phred score profile can be estimated from
 existing \bam{} files using \Rfunction{estimateSimParam} function (two available
-examples for \phred{} are stored in the 'extdata' directory of
+examples for Phred score profile are stored in the 'extdata' directory of
 \Biocpkg{SimFFPE} package). The \Rfunction{estimateSimParam} also show messages
 about some other basic statistics as read length, median / MAD of insert length
 and some FFPE-related statistics. Additional information can be found on the
