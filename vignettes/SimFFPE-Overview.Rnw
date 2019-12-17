@@ -8,18 +8,20 @@
 <<style, echo=FALSE, results=tex>>=
 BiocStyle::latex()
 @
+
+\usepackage[utf8]{inputenc}
+
 \newcommand{\bam}{\texttt{BAM}}
 \newcommand{\fasta}{\texttt{FASTA}}
 \newcommand{\phred}{\texttt{Phred score profile}}
 
-\begin{document}
-
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
-\date{Modified: 17 December, 2019. Compiled: \today}
+\date{Modified: 17 December, 2019.Compiled: \today}
 
 \SweaveOpts{concordance=TRUE}
 
+\begin{document}
 \maketitle
 
 \tableofcontents
