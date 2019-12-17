@@ -17,8 +17,6 @@ BiocStyle::latex()
 \author{Lanying Wei}
 \date{Modified: 17 December, 2019. Compiled: \today}
 
-\SweaveOpts{concordance=TRUE}
-
 \begin{document}
 \maketitle
 
