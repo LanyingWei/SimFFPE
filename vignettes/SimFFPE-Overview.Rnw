@@ -66,6 +66,7 @@ PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
 PhredScoreProfile2 <- fread(PhredScoreProfilePath)
 @
+%%
 The \fasta{} file of reference genome should be read in as \Rclass{DNAStringSet}
 with \Rfunction{readDNAStringSet} function from \Biocpkg{Biostrings} package.
 <<readDNAStringSet>>=
