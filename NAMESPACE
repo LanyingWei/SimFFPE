@@ -1,7 +1,6 @@
-import(S4Vectors)
-import(IRanges)
 import(Biostrings)
 import(Rsamtools)
+import(IRanges)
 import(GenomicRanges)
 import(data.table, except = shift)
 importFrom(parallel, makeCluster, stopCluster)
