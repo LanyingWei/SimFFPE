@@ -1,27 +1,23 @@
-%\VignetteIndexEntry{An introduction to SimFFPE}
-%\VignetteDepends{}
-%\VignetteKeywords{Read Simulation, FFPE tissue, NGS}
-%\VignettePackage{SimFFPE}
+%\VignetteIndexEntry{Introduction to SimFFPE}
+
 \documentclass{article}
 
-<<style, echo=FALSE, results=tex>>=
+<<style, eval=TRUE, echo=FALSE, results=tex>>=
 BiocStyle::latex()
 @
-\newcommand{\bam}{\texttt{BAM}}
-\newcommand{\fasta}{\texttt{FASTA}}
 
-\title{An Introduction to SimFFPE}
+\title{Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
-\date{Modified: 17 December, 2019}
+\date{\today}
 
-\begin{document}
+\begin{document} 
 
 \maketitle
 
 \tableofcontents
 
-<<options,echo=FALSE>>=
-options(width=60)
+<<options, echo=FALSE>>=
+options(width=72)
 @
 
 \section{Introduction}
@@ -39,18 +35,16 @@ multi-threading can help reduce the runtime.
 
 \section{Input}
 
-The essential inputs for the simulation include a \fasta{} file of the reference
+The essential inputs for the simulation include a FASTA file of the reference
 genome, a Phred score profile to simulate Phred scores based on the position on the reads,
 and a table of target regions (optional). The Phred score profile can be estimated from
-existing \bam{} files using \Rfunction{estimateSimParam} function (two available
+existing BAM files using \Rfunction{estimateSimParam} function (two available
 examples for Phred score profile are stored in the 'extdata' directory of
 \Biocpkg{SimFFPE} package). The \Rfunction{estimateSimParam} also show messages
 about some other basic statistics as read length, median / MAD of insert length
 and some FFPE-related statistics. Additional information can be found on the
 help page for \Rfunction{estimateSimParam}.
-<<installing,eval=FALSE>>=
-BiocManager::install("SimFFPE")
-@
+
 <<estimateSimParam>>=
 library(SimFFPE)
 bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
@@ -66,26 +60,25 @@ PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
 PhredScoreProfile2 <- fread(PhredScoreProfilePath)
 @
-%%
-The \fasta{} file of reference genome should be read in as \Rclass{DNAStringSet}
+
+The FASTA file of reference genome should be read in as \Rclass{DNAStringSet}
 with \Rfunction{readDNAStringSet} function from \Biocpkg{Biostrings} package.
 <<readDNAStringSet>>=
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
 reference
-
 @
-%%
+
 To simulate reads of certain regions, the target regions are required (not
 required when simulating reads on the whole genome / several chromosomes /
 large regions). The table representing the target regions should have three
 columns, which indicate chromosomes, start positions and end positions
 respectively (one-based coordinate).
-<<target region table>>=
+<<target_region_table>>=
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
 targetRegions <- fread(regionPath)
 @
-%%
+
 \section{Simulation}
 
 The simulation includes three steps: 1. Simulate artifact chimeric reads
@@ -122,7 +115,7 @@ readSimFFPE(sourceSeq2, reference, PhredScoreProfile, outFile2,
             meanInsertLen = 250, sdInsertLen = 80, enzymeCut = TRUE)
 
 @
-%%
+
 To simulate reads on whole exome or targeted regions please use the
 \Rfunction{targetReadSimFFPE} function:
 <<targetReadSimFFPE>>=
@@ -131,9 +124,8 @@ outFile <- paste0(tempdir(), "/sim3")
 targetReadSimFFPE(reference, PhredScoreProfile2, targetRegions, outFile,
 coverage = 120, readLen = 100, meanInsertLen = 150, sdInsertLen = 40,
 enzymeCut = FALSE)
-
 @
-%%
+
 Additional information can be found on the help pages for the
 \Rfunction{readSimFFPE} function and the \Rfunction{targetReadSimFFPE} function.
 
@@ -200,9 +192,8 @@ reads are shown in Figure \ref{fig:3}.
   soft-clips are shown as colored vertical lines in reads.}
 \end{figure*}
 
-\appendix
-\section{Session info}
-<<sessionInfo>>=
+\section{Session information}
+<<sessionInfo, echo=FALSE>>=
 packageDescription("SimFFPE")
 sessionInfo()
 @
