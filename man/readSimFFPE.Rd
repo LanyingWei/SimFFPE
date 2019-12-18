@@ -193,8 +193,9 @@ vignette for the guidance of fine-tuning.
 \code{\link{targetReadSimFFPE}}
 }
 \examples{
-bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
-PhredScoreProfile <- estimateSimParam(bamFilePath1)
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
+                                      package = "SimFFPE")
+PhredScoreProfile <- fread(PhredScoreProfilePath)
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
@@ -211,9 +212,6 @@ readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1, overWrite = TRUE,
 ## Simulate reads of defined regions on the first two sequences of reference
 ## genome
 
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
-                                      package = "SimFFPE")
-PhredScoreProfile <- fread(PhredScoreProfilePath)
 sourceSeq2 <- DNAStringSet(lapply(reference[1:2], function(x) x[1:10000]))
 outFile2 <- paste0(tempdir(), "/sim2")
 readSimFFPE(sourceSeq2, reference, PhredScoreProfile, outFile2,

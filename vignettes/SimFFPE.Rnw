@@ -1,22 +1,19 @@
-%\VignetteIndexEntry{Introduction to SimFFPE}
+%\VignetteIndexEntry{An introduction to SimFFPE}
+%\VignetteDepends{}
+%\VignetteKeywords{Read Simulation, FFPE tissue, NGS}
 %\VignettePackage{SimFFPE}
-%\VignetteEngine{utils::Sweave}
-
 \documentclass{article}
 
-<<<style-Sweave, eval=TRUE, echo=FALSE, results=tex>>=
+<<style, echo=FALSE, results=tex>>=
 BiocStyle::latex()
 @
 
-\newcommand{\bam}{\texttt{BAM}}
-\newcommand{\fasta}{\texttt{FASTA}}
-\newcommand{\phred}{\texttt{Phred score profile}}
-
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
-\date{Modified: 12 December, 2019. Compiled: \today}
+\date{Modified: 18 December, 2019. Compiled: \today}
 
 \begin{document}
+\SweaveOpts{concordance=TRUE}
 
 \maketitle
 
@@ -25,6 +22,9 @@ BiocStyle::latex()
 <<options, echo=FALSE>>=
 options(width=60)
 @
+\newcommand{\bam}{\texttt{BAM}}
+\newcommand{\fasta}{\texttt{FASTA}}
+\newcommand{\phred}{\texttt{Phred score profile}}
 
 \section{Introduction}
 
@@ -53,8 +53,8 @@ help page for \Rfunction{estimateSimParam}.
 
 <<estimateSimParam>>=
 library(SimFFPE)
-bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
-PhredScoreProfile <- estimateSimParam(bamFilePath1)
+bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
+PhredScoreProfile <- estimateSimParam(bamFilePath)
 
 ## Example Phred score profile with 150 read length
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
@@ -114,8 +114,8 @@ readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1,
             enzymeCut = TRUE, threads = 2)
 
 
-## Simulate reads of defined regions on the first two sequences of the reference
-## genome
+## Simulate reads of defined regions on the first two sequences of
+## the reference genome
 
 sourceSeq2 <- DNAStringSet(lapply(reference[1:2], function(x) x[1:10000]))
 outFile2 <- paste0(tempdir(), "/sim2")

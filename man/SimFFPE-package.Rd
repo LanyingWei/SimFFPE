@@ -47,12 +47,13 @@ Maintainer: \packageMaintainer{SimFFPE}
 \code{\link{targetReadSimFFPE}}
 }
 \examples{
-bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
-PhredScoreProfile <- estimateSimParam(bamFilePath1)
+
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
+                                     package = "SimFFPE")
+PhredScoreProfile <- fread(PhredScoreProfilePath)
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
-
 
 ## Simulate reads of the first three sequences of the reference genome
 
@@ -65,9 +66,11 @@ readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1, overWrite = TRUE,
 
 ## Simulate reads for targeted regions
 
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
-                                     package = "SimFFPE")
-PhredScoreProfile <- fread(PhredScoreProfilePath)
+bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
+regionPath <- system.file("extdata", "regionsBam.txt", package = "SimFFPE")
+regions <- fread(regionPath)
+PhredScoreProfilePath <- estimateSimParam(bamFilePath, calcPhredProfile = FALSE,
+                                          targetRegions = regions)
 
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
 targetRegions <- fread(regionPath)

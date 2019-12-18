@@ -75,12 +75,8 @@ Lanying Wei <lanying.wei@uni-muenster.de>
 \code{\link{targetReadSimFFPE}}
 }
 \examples{
-bamFilePath1 <- system.file("extdata", "example1.bam", package = "SimFFPE")
-PhredScoreProfile <- estimateSimParam(bamFilePath1)
-
-bamFilePath2 <- system.file("extdata", "example2.bam", package = "SimFFPE")
+bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
 regionPath <- system.file("extdata", "regionsBam.txt", package = "SimFFPE")
 regions <- fread(regionPath)
-estimateSimParam(bamFilePath2, calcPhredProfile = FALSE,
-                 targetRegions = regions)
+estimateSimParam(bamFilePath, calcPhredProfile = FALSE, targetRegions = regions)
 }
