@@ -2,10 +2,6 @@
 
 \documentclass{article}
 
-<<style, eval=TRUE, echo=FALSE, results=tex>>=
-BiocStyle::latex()
-@
-
 \title{Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
 \date{\today}
