@@ -1,7 +1,7 @@
 Package: SimFFPE
 Type: Package
 Title: NGS Read Simulator for FFPE Tissue
-Version: 0.99.20
+Version: 0.99.21
 Author: Lanying Wei
 Maintainer: Lanying Wei <lanying.wei@uni-muenster.de>
 Description: This package simulates artifact chimeric reads specifically generated 
@@ -9,7 +9,7 @@ Description: This package simulates artifact chimeric reads specifically generat
     (FFPE) tissue.
 License: LGPL-3
 Encoding: UTF-8
-Depends: Biostrings, data.table
-Imports: dplyr, foreach, doParallel, truncnorm, GenomicRanges, IRanges, Rsamtools, parallel, graphics, stats, utils
+Depends: Biostrings
+Imports: dplyr, foreach, doParallel, truncnorm, GenomicRanges, IRanges, Rsamtools, parallel, graphics, stats, utils, methods
 Suggests: BiocStyle
 biocViews: Sequencing, Alignment, MultipleComparison, SequenceMatching, DataImport

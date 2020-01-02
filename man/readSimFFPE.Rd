@@ -10,8 +10,8 @@ function simulates these artifacts as well as normal reads for FFPE samples
 on whole genome, or several chromosomes, or large regions.
 }
 \usage{
-readSimFFPE(sourceSeq, reference, PhredScoreProfile, coverage, readLen,
-meanInsertLen, sdInsertLen, outFile, enzymeCut = FALSE, covRatioFFPE = 0.05,
+readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile, coverage, readLen,
+meanInsertLen, sdInsertLen, enzymeCut = FALSE, covRatioFFPE = 0.05,
 localMatchRatio = 0.1, windowLen = 10000, matchWinLen = 10000, meanSeedLen = 5,
 sdSeedLen = 3, revChimericProb = 0.8, spikeWidth = 1500, mutationRate = 0.005,
 noiseRate = 0.0015, highNoiseRate = 0.08, highNoiseProb = 0.015,
@@ -27,10 +27,14 @@ whole reference genome or just the selected chromosomes or chromosome regions.
 A DNAStringSet object of the whole reference genome.
 }
   \item{PhredScoreProfile}{
-A data frame object representing the positional Phred score proportion. Each row
-represents a position in the read (from begin to end), and each column the Phred
-quality score of base-calling error probabilities. The profile can be calculated
-from BAM file using the \code{\link{estimateSimParam}} function.
+A matrix representing the positional Phred score proportion. Each row of the 
+matrix represents a position in the read (from begin to end), and each column 
+the Phred quality score of base-calling error probabilities. The profile can be 
+calculated from BAM file using the \code{\link{estimateSimParam}} function.
+}
+  \item{outFile}{
+Output file path for the FASTQ file with simulated reads. Please include the
+name of the output file, e.g. "/tmp/sim1".
 }
   \item{coverage}{
 Coverage of the simulated file.
@@ -43,10 +47,6 @@ Mean insert length for the simulation (normally distributed).
 }
   \item{sdInsertLen}{
 Standard deviation of the insert length for simulation (normally distributed).
-}
-  \item{outFile}{
-Output file path for the FASTQ file with simulated reads. Please include the
-name of the output file, e.g. "/tmp/sim1".
 }
   \item{enzymeCut}{
 Simulate enzymatic fragmentation if it is set to true, otherwise simulate random
@@ -193,9 +193,11 @@ vignette for the guidance of fine-tuning.
 \code{\link{targetReadSimFFPE}}
 }
 \examples{
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                       package = "SimFFPE")
-PhredScoreProfile <- fread(PhredScoreProfilePath)
+PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
+colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
+                                          nrows = 1, colClasses = "character")
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
@@ -219,10 +221,11 @@ readSimFFPE(sourceSeq2, reference, PhredScoreProfile, outFile2,
             sdInsertLen = 80, enzymeCut = TRUE, threads = 1)
 
 
-## Simulate reads of certain regions on the third sequence of reference genome
-## and merge them with existing reads (a different prefix is needed)
+## Simulate reads of defined regions on the second and the third sequence of 
+## reference genome and merge them with existing reads (a different prefix is 
+## needed)
 
-sourceSeq3 <- DNAStringSet(lapply(reference[3], function(x) x[1:10000]))
+sourceSeq3 <- DNAStringSet(lapply(reference[2:3], function(x) x[1:10000]))
 readSimFFPE(sourceSeq3, reference, PhredScoreProfile, outFile2,
             overWrite = FALSE, prefix = "simFFPE2", coverage = 80,
             readLen = 150, meanInsertLen = 250, sdInsertLen = 80,

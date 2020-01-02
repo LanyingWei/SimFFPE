@@ -50,7 +50,9 @@ Maintainer: \packageMaintainer{SimFFPE}
 
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
-PhredScoreProfile <- fread(PhredScoreProfilePath)
+PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
+colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
+                                          nrows = 1, colClasses = "character")
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
@@ -68,15 +70,15 @@ readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1, overWrite = TRUE,
 
 bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
 regionPath <- system.file("extdata", "regionsBam.txt", package = "SimFFPE")
-regions <- fread(regionPath)
-PhredScoreProfilePath <- estimateSimParam(bamFilePath, calcPhredProfile = FALSE,
-                                          targetRegions = regions)
+regions <- read.table(regionPath)
+PhredScoreProfile <- estimateSimParam(bamFilePath, calcPhredProfile = FALSE,
+                                      targetRegions = regions)
 
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
-targetRegions <- fread(regionPath)
+targetRegions <- read.table(regionPath)
 
 outFile <- paste0(tempdir(), "/sim2")
 targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile,
-coverage = 120, readLen = 100, meanInsertLen = 150, sdInsertLen = 40,
-enzymeCut = FALSE)
+                  coverage = 120, readLen = 100, meanInsertLen = 150, 
+                  sdInsertLen = 40, enzymeCut = FALSE)
 }

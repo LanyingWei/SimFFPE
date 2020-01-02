@@ -129,17 +129,18 @@ generateNormalReads <- function(fullSeq, nSeq, meanInsertLen, sdInsertLen,
         }
 
     } else if (!pairedEnd && length(starts) > 0){
-        mid <- round(nSeq / 2)
+        mid <- round(length(starts) / 2)
         reads1 <- extractAt(x = fullSeq,
                             at = IRanges(start = starts[seq_len(mid)],
                                          width = readLen))
         reads2 <-
             extractAt(x = revComp,
-                      at = IRanges(start = fullLen - ends[(mid+1):nSeq] + 1,
+                      at = IRanges(start = fullLen - 
+                                       ends[(mid+1):length(ends)] + 1,
                                    width = readLen))
         reads <- c(reads1, reads2)
 
-        reads <- reads[!which(grepl("N", reads))]
+        reads <- reads[!grepl("N", reads)]
         nReads <- length(reads)
         if (nReads > 0) {
             noiseRates <- rep(noiseRate, length(reads))

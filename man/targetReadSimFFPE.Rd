@@ -9,8 +9,8 @@ function simulates these artifacts as well as normal reads for FFPE samples
 within defined regions.
 }
 \usage{
-targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, coverage,
-readLen, meanInsertLen, sdInsertLen, outFile, enzymeCut = FALSE,
+targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile, 
+coverage, readLen, meanInsertLen, sdInsertLen, enzymeCut = FALSE,
 covRatioFFPE = 0.1, localMatchRatio = 0.1, padding = NA, minGap = NA,
 matchPadding = 5000, windowLen = 10000, matchWinLen = 10000, meanSeedLen = 5,
 sdSeedLen = 3, revChimericProb = 0.8, spikeWidth = 1500, mutationRate = 0.005,
@@ -23,16 +23,20 @@ distantChimeric = TRUE, normalReads = TRUE, overWrite = FALSE)
 A DNAStringSet object of the whole reference genome.
 }
   \item{PhredScoreProfile}{
-A data frame object representing the positional Phred score proportion. Each row
-represents a position in the read (from begin to end), and each column the Phred
-quality score of base-calling error probabilities. The profile can be calculated
-from BAM file using the \code{\link{estimateSimParam}} function.
+A matrix representing the positional Phred score proportion. Each row of the 
+matrix represents a position in the read (from begin to end), and each column 
+the Phred quality score of base-calling error probabilities. The profile can be 
+calculated from BAM file using the \code{\link{estimateSimParam}} function.
 }
   \item{targetRegions}{
-A table of exonic / targeted regions to simulate. The first column should be
-the chromosome, the second the start position and the third the end position.
-Please use one-based coordinate systems (the first base should be marked with 1
-but not 0).
+A DataFrame or GenomicRanges object representing the exonic / targeted regions 
+to simulate. If it is a DataFrame, the first column should be the chromosome, 
+the second the start position and the third the end position. Please use 
+one-based coordinate systems (the first base should be marked with 1 but not 0).
+}
+  \item{outFile}{
+Output file path for the FASTQ file with simulated reads. Please include the
+name of the output file, e.g. "/tmp/sim1".
 }
   \item{coverage}{
 Coverage of the simulated file.
@@ -45,10 +49,6 @@ Mean insert length for simulation (normally distributed).
 }
   \item{sdInsertLen}{
 Standard deviation of the insert length for simulation (normally distributed).
-}
-  \item{outFile}{
-Output file path for the FASTQ file with simulated reads. Please include the
-name of the output file, e.g. "/tmp/sim1".
 }
   \item{enzymeCut}{
 Simulate enzymatic fragmentation if it is set to true, otherwise simulate random
@@ -217,19 +217,21 @@ for the guidance of fine-tuning.
 \code{\link{SimFFPE}}, \code{\link{estimateSimParam}}, \code{\link{readSimFFPE}}
 }
 \examples{
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
                                      package = "SimFFPE")
-PhredScoreProfile <- fread(PhredScoreProfilePath)
+PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
+colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
+                                          nrows = 1, colClasses = "character")
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
 
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
-targetRegions <- fread(regionPath)
+targetRegions <- read.table(regionPath)
 
 outFile <- paste0(tempdir(), "/sim3")
 targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile,
-coverage = 120, readLen = 100, meanInsertLen = 150, sdInsertLen = 40,
-enzymeCut = FALSE)
+                  coverage = 120, readLen = 100, meanInsertLen = 150, 
+                  sdInsertLen = 40, enzymeCut = FALSE)
 
 }

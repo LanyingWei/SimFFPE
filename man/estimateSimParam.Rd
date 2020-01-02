@@ -27,9 +27,12 @@ larger than this value will be subsampled for parameter estimation if
 disableSubsampling is set to be false.
 }
   \item{targetRegions}{
-Target regions for calculation. Use it for targeted sequencing / WES data, or
-whenever manual selected subsample regions are desired (set
-disableSubsampling to true in this case).
+A DataFrame or GenomicRanges object representing the target regions for 
+calculation. Use it for targeted sequencing / WES data, or whenever manual 
+selected subsample regions are desired (set disableSubsampling to true in this 
+case). If it is a DataFrame, the first column should be the chromosome, the 
+second the start position and the third the end position. Please use one-based 
+coordinate systems (the first base should be marked with 1 but not 0).
 }
   \item{subsampleRatio}{
 Ratio for subsampling. Together with subsampleRegionLength to determine
@@ -60,10 +63,10 @@ applied to the simulated bam file / paired fresh frozen sample of FFPE sample
 for comparison of certain statistics.
 }
 \value{
-A data frame object will be returned if calcPhredProfile is set to true.
-Each row represents a position in the read (from begin to end), and each column
+A matrix will be returned if calcPhredProfile is set to true. Each row of the 
+matrix represents a position in the read (from begin to end), and each column
 the Phred quality score of base-calling error probabilities. The value in the
-data frame represents the positional Phred score proportion.
+matrix represents the positional Phred score proportion.
 }
 
 \author{
@@ -77,6 +80,6 @@ Lanying Wei <lanying.wei@uni-muenster.de>
 \examples{
 bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
 regionPath <- system.file("extdata", "regionsBam.txt", package = "SimFFPE")
-regions <- fread(regionPath)
+regions <- read.table(regionPath)
 estimateSimParam(bamFilePath, calcPhredProfile = FALSE, targetRegions = regions)
 }

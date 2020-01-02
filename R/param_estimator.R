@@ -5,8 +5,8 @@ calcPhredScoreProfile <- function(qual) {
     qual <- as.data.frame(do.call("bind_rows", qual))
     qualProb <- mapply("/", apply(qual, 2, table), apply(qual, 2, length),
                        SIMPLIFY = FALSE)
-    qualProb <- as.data.frame(do.call("bind_rows", qualProb))
-    qualProb <- qualProb[, order(phred2ASCIIOffset(names(qualProb)))]
+    qualProb <- as.matrix(do.call("bind_rows", qualProb))
+    qualProb <- qualProb[, order(phred2ASCIIOffset(colnames(qualProb)))]
     qualProb[is.na(qualProb)] <- 0
     message('Calculation done.')
     return(qualProb)
@@ -33,7 +33,6 @@ findReads <- function(bamFile,
                       mapqFilter = mapqFilter)
 
     bam <- scanBam(bamFile, param = p)[[1]]
-    message(paste("Found", length(bam), "reads."))
     return(bam)
 }
 
@@ -46,6 +45,13 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
 
     bamFile <- BamFile(bamFilePath)
     seqInfo <- scanBamHeader(bamFile)$targets
+    
+    if (length(targetRegions) != 0 & is(targetRegions, "GenomicRanges")) {
+        targetRegions <- data.frame(seqnames(targetRegions), 
+                                    start(targetRegions), 
+                                    end(targetRegions))
+    }
+    
     if (file.info(bamFilePath)$size / 1e+9 <= maxFileSize |
         disableSubsampling) {
         if (length(targetRegions) == 0) {
@@ -69,11 +75,11 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
             subsampleRatio <-
                 maxFileSize * 1e+9 / file.info(bamFilePath)$size
         }
-        message(paste0("BAM filesize greater than ",
-                       maxFileSize,
-                       " gigabytes, calculation based on subsampled reads ",
-                       "(subsample ratio: ",
-                       subsampleRatio, ")."))
+        message("BAM filesize greater than ",
+                maxFileSize,
+                " gigabytes, calculation based on subsampled reads ",
+                "(subsample ratio: ",
+                subsampleRatio, ").")
         if (length(targetRegions) == 0) {
             nRegions <- seqInfo * subsampleRatio / subsampleRegionLength
             seqInfo <- seqInfo[nRegions >= 1]
@@ -104,8 +110,8 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
                                       round(length(regions) * subsampleRatio))]
         }
     }
-    message(paste("Subsample BAM file in", length(regions), "regions."))
-    message(paste("Using", threads, "thread(s)."))
+    message("Subsample BAM file in ", length(regions), " regions.", 
+            "\nUsing ", threads, " thread(s).")
     cl <- makeCluster(threads)
     registerDoParallel(cl)
 
@@ -135,33 +141,36 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
     if (length(insertSize) == 0) {
         stop("No reads found.")
     }
-    message(paste("Calculating based on",
-                  length(insertSize), "reads..."))
+    
     readLen <- max(unlist(unname(readInfo[names(readInfo) == "qwidth"])),
                    na.rm = TRUE)
-    message("Read length: ", readLen)
     medianIns <- median(insertSize[insertSize >= readLen], na.rm = TRUE)
     MADIns <- mad(insertSize[insertSize >= readLen], na.rm = TRUE)
-    message("Estimated median insert size (for insertsize >= read length): ",
-            medianIns)
-    message("Estimated median absolute deviation of ",
-            "insert size (for insertsize >= read length): ", MADIns)
     flag <- unlist(unname(readInfo[names(readInfo) == "flag"]))
     isSupAlign <- vapply(flag, function(x) as.integer(intToBits(x))[12],
                          numeric(1))
     isProperPaired <- vapply(flag, function(x) as.integer(intToBits(x))[2],
                              numeric(1))
     supAlignProp <- sum(isSupAlign)/length(isSupAlign)
-    message("Estimated proportion of supplementary alignment: ", supAlignProp)
     IPPProp <- sum(!isProperPaired) / length(isProperPaired)
-    message("Estimated proportion of read NOT mapped in proper pair: ", IPPProp)
-    message("Estimated proportion of supplementary alignments in reads ",
-            "NOT mapped in proper pair: ",
-            (sum(!isProperPaired & isSupAlign)) / sum(!isProperPaired))
     NMTable <- table(unname(unlist(readInfo[names(readInfo) == "tag"])))
     NMTable <- NMTable / sum(NMTable)
-    message("Proportion of reads with N edit distance:")
-    message(paste0(capture.output(NMTable), collapse = "\n"))
+    
+    message("Calculating based on ", length(insertSize), " reads...",
+            "\nRead length: ", readLen,
+            "\nEstimated median insert size (for insertsize >= read length): ",
+            medianIns,
+            "\nEstimated median absolute deviation of ",
+            "insert size (for insertsize >= read length): ", MADIns,
+            "\nEstimated proportion of supplementary alignment: ", 
+            supAlignProp,
+            "\nEstimated proportion of read NOT mapped in proper pair: ", 
+            IPPProp,
+            "\nEstimated proportion of supplementary alignments in reads ",
+            "NOT mapped in proper pair: ",
+            (sum(!isProperPaired & isSupAlign)) / sum(!isProperPaired),
+            "\nProportion of reads with N edit distance:",
+            paste0(capture.output(NMTable), collapse = "\n"))
 
     if (calcPhredProfile) {
         qual <- do.call("c", unname(readInfo[names(readInfo) == "qual"]))

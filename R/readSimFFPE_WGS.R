@@ -1,5 +1,5 @@
-readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
-                        coverage, readLen, meanInsertLen, sdInsertLen, outFile,
+readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile, outFile,
+                        coverage, readLen, meanInsertLen, sdInsertLen,
                         enzymeCut=FALSE, covRatioFFPE=0.05, localMatchRatio=0.1,
                         windowLen=10000, matchWinLen=10000,
                         meanSeedLen=5, sdSeedLen=3,
@@ -9,6 +9,12 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
                         pairedEnd=TRUE, prefix="SimFFPE", threads=1,
                         localChimeric=TRUE, distantChimeric=TRUE,
                         normalReads=TRUE, overWrite=FALSE) {
+    
+    if (nrow(PhredScoreProfile) != readLen) {
+        stop("The number of rows in PhredScoreProfile should be the same as", 
+             " the input readLen")
+    }
+    
     if (overWrite) {
         overWriteFastq(outFile = outFile, pairedEnd = pairedEnd)
     }
@@ -43,11 +49,11 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
 
     cl <- makeCluster(threads)
     registerDoParallel(cl)
-    message(paste("Using", threads, "thread(s) for simulation."))
+    message("Using ", threads, " thread(s) for simulation.")
 
     for (i in seq_along(sourceSeq)) {
         chr <- names(sourceSeq)[i]
-        message(paste0("Simulating FFPE reads on the chromosome ", chr, "..."))
+        message("Simulating FFPE reads on the chromosome ", chr, "...")
         fullSeq <- sourceSeq[[i]]
         if (localChimeric) {
             startPos <- NULL
@@ -57,7 +63,7 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
                         .combine = "c",
                         .inorder = TRUE,
                         .verbose = FALSE,
-                        #.errorhandling    = "remove",
+                        .errorhandling    = "remove",
                         .packages = c("Biostrings"),
                         .export = c("generateRegionalChimericReads",
                                     "generateRegionalChimericSeqs",
@@ -94,9 +100,8 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
                          pairedEnd = pairedEnd,
                          outFile = outFile,
                          threads = threads)
-            message(paste0("Generated ", length(simReads),
-                           " local chimeric reads ",
-                           "on chromosome ", chr, "."))
+            message("Generated ", length(simReads), " local chimeric reads ",
+                    "on chromosome ", chr, ".")
             nReadsLocal <- nReadsLocal + length(simReads)
         }
 
@@ -117,7 +122,7 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
                         .inorder = TRUE,
                         .verbose = FALSE,
                         .packages = "Biostrings",
-                        #.errorhandling = "remove",
+                        .errorhandling = "remove",
                         .export = c("generateDistantChimericReads",
                                     "generateDistantChimericSeqs",
                                     "generateReads",
@@ -159,9 +164,9 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
                          outFile = outFile,
                          threads = threads)
 
-            message(paste0("Generated ", length(simReads),
-                           " distant chimeric reads ",
-                           "on chromosome ", chr, "."))
+            message("Generated ", length(simReads),
+                    " distant chimeric reads ",
+                    "on chromosome ", chr, ".")
             nReadsDistant <- nReadsDistant + length(simReads)
         }
 
@@ -203,18 +208,17 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile,
                          outFile = outFile,
                          threads = threads)
 
-            message(paste0("Generated ", length(simReads), " normal reads ",
-                           "on chromosome ", chr, "."))
+            message("Generated ", length(simReads), " normal reads ",
+                    "on chromosome ", chr, ".")
             nReadsNorm <- nReadsNorm + length(simReads)
         }
     }
 
     stopCluster(cl)
 
-    message(paste("In totoal", nReadsLocal, "local chimeric reads,",
-                  nReadsDistant, "distant chimeric reads",
-                  nReadsNorm, "normal reads were generated.",
-                  "Alltogether", nReadsLocal + nReadsDistant + nReadsNorm,
-                  "reads were generated."))
-    message("Simulation done.")
+    message("In totoal ", nReadsLocal, " local chimeric reads, ",
+            nReadsDistant, " distant chimeric reads, ",
+            nReadsNorm, " normal reads were generated.",
+            "\nAlltogether ", nReadsLocal + nReadsDistant + nReadsNorm,
+            " reads were generated.", "\nSimulation done.")
 }

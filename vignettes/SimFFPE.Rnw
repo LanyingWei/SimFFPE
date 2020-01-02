@@ -10,7 +10,7 @@ BiocStyle::latex()
 
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
-\date{Modified: 18 December, 2019. Compiled: \today}
+\date{Modified: January 2, 2020. Compiled: \today}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
@@ -42,29 +42,37 @@ multi-threading can help reduce the runtime.
 \section{Input}
 
 The essential inputs for the simulation include a \fasta{} file of the reference
-genome, a \phred{} to simulate Phred scores based on the position on the reads,
-and a table of target regions (optional). The \phred{} can be estimated from
-existing \bam{} files using \Rfunction{estimateSimParam} function (two available
-examples for \phred{} are stored in the 'extdata' directory of
-\Biocpkg{SimFFPE} package). The \Rfunction{estimateSimParam} also show messages
-about some other basic statistics as read length, median / MAD of insert length
-and some FFPE-related statistics. Additional information can be found on the
-help page for \Rfunction{estimateSimParam}.
+genome, a \phred{} matrix to simulate Phred scores based on the position on the 
+reads, and a DataFrame or GenomicRanges object representing the target regions 
+(optional). The \phred{} can be estimated from existing \bam{} files using 
+\Rfunction{estimateSimParam} function (two available examples for \phred{} are 
+stored in the 'extdata' directory of \Biocpkg{SimFFPE} package). The 
+\Rfunction{estimateSimParam} also show messages about some other basic 
+statistics as read length, median / MAD of insert length and some FFPE-related 
+statistics. Additional information can be found on the help page for 
+\Rfunction{estimateSimParam}.
 
 <<estimateSimParam>>=
 library(SimFFPE)
 bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
 PhredScoreProfile <- estimateSimParam(bamFilePath)
 
-## Example Phred score profile with 150 read length
+## Example Phred score profile with 100 read length
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
                                      package = "SimFFPE")
-PhredScoreProfile1 <- fread(PhredScoreProfilePath)
+PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
+colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
+                                          nrows = 1, 
+                                          colClasses = "character")
+#
+## Example Phred score profile with 150 read length
 
-## Example Phred score profile with 100 read length
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
+PhredScoreProfilePath2 <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
-PhredScoreProfile2 <- fread(PhredScoreProfilePath)
+PhredScoreProfile2 <- as.matrix(read.table(PhredScoreProfilePath2, skip = 1))
+colnames(PhredScoreProfile2) <- read.table(PhredScoreProfilePath2, 
+                                          nrows = 1, 
+                                          colClasses = "character")
 
 @
 
@@ -77,14 +85,15 @@ reference
 
 @
 %%
-To simulate reads of certain regions, the target regions are required (not
-required when simulating reads on the whole genome / several chromosomes /
-large regions). The table representing the target regions should have three
-columns, which indicate chromosomes, start positions and end positions
-respectively (one-based coordinate).
+To simulate reads of certain regions, a DataFrame or GenomicRanges object 
+representing the target regions is required (not required when simulating reads 
+on the whole genome / several chromosomes / large regions). The DataFrame 
+representing the target regions should have three columns, which indicate 
+chromosomes, start positions and end positions respectively (one-based 
+coordinate).
 <<target region table>>=
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
-targetRegions <- fread(regionPath)
+targetRegions <- read.table(regionPath)
 @
 %%
 
@@ -108,18 +117,17 @@ please use the \Rfunction{readSimFFPE} function:
 
 sourceSeq <- reference[1:3]
 outFile1 <- paste0(tempdir(), "/sim1")
-readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1,
+readSimFFPE(sourceSeq, reference, PhredScoreProfile2, outFile1,
             overWrite = TRUE, coverage = 80, readLen = 150,
             meanInsertLen = 250, sdInsertLen = 80,
             enzymeCut = TRUE, threads = 2)
-
-
+#
 ## Simulate reads of defined regions on the first two sequences of
 ## the reference genome
 
 sourceSeq2 <- DNAStringSet(lapply(reference[1:2], function(x) x[1:10000]))
 outFile2 <- paste0(tempdir(), "/sim2")
-readSimFFPE(sourceSeq2, reference, PhredScoreProfile, outFile2,
+readSimFFPE(sourceSeq2, reference, PhredScoreProfile2, outFile2,
             overWrite = TRUE, coverage = 80, readLen = 150,
             meanInsertLen = 250, sdInsertLen = 80, enzymeCut = TRUE)
 
@@ -130,10 +138,10 @@ To simulate reads on whole exome or targeted regions please use the
 \Rfunction{targetReadSimFFPE} function:
 <<targetReadSimFFPE>>=
 
-outFile <- paste0(tempdir(), "/sim3")
-targetReadSimFFPE(reference, PhredScoreProfile2, targetRegions, outFile,
-coverage = 120, readLen = 100, meanInsertLen = 150, sdInsertLen = 40,
-enzymeCut = FALSE)
+outFile3 <- paste0(tempdir(), "/sim3")
+targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile3,
+                  coverage = 120, readLen = 100, meanInsertLen = 150, 
+                  sdInsertLen = 40, enzymeCut = FALSE)
 
 @
 %%
@@ -180,7 +188,6 @@ parameter spikeWidth is used to simulate this length.
 6) highNoiseRate and highNoiseProb: The noise rate for each base in and the
 proportion of very noisy reads. These very noisy reads as well as less noisy
 reads are shown in Figure \ref{fig:3}.
-
 
 \begin{figure*}
   \includegraphics[width=1\textwidth]{./ex1.png}
