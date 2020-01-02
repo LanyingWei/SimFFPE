@@ -71,11 +71,8 @@ readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1, overWrite = TRUE,
 bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
 regionPath <- system.file("extdata", "regionsBam.txt", package = "SimFFPE")
 regions <- read.table(regionPath)
-PhredScoreProfile <- estimateSimParam(bamFilePath, calcPhredProfile = FALSE,
+PhredScoreProfile <- estimateSimParam(bamFilePath, calcPhredProfile = TRUE,
                                       targetRegions = regions)
-
-regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
-targetRegions <- read.table(regionPath)
 
 outFile <- paste0(tempdir(), "/sim2")
 targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile,
