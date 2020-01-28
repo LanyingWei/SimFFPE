@@ -1,6 +1,6 @@
 readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile, outFile,
                         coverage, readLen, meanInsertLen, sdInsertLen,
-                        enzymeCut=FALSE, covRatioFFPE=0.05, localMatchRatio=0.1,
+                        enzymeCut=FALSE, covRatioFFPE=0.08, localMatchRatio=0.1,
                         windowLen=10000, matchWinLen=10000,
                         meanSeedLen=5, sdSeedLen=3,
                         revChimericProb=0.8, spikeWidth = 1500,
@@ -9,6 +9,15 @@ readSimFFPE <- function(sourceSeq, reference, PhredScoreProfile, outFile,
                         pairedEnd=TRUE, prefix="SimFFPE", threads=1,
                         localChimeric=TRUE, distantChimeric=TRUE,
                         normalReads=TRUE, overWrite=FALSE) {
+    
+    if(missing(sourceSeq)) stop("sourceSeq is required")
+    if(missing(reference)) stop("reference is required")
+    if(missing(PhredScoreProfile)) stop("PhredScoreProfile is required")
+    if(missing(outFile)) stop("outFile is required")
+    if(missing(coverage)) stop("coverage is required")
+    if(missing(readLen)) stop("readLen is required")
+    if(missing(meanInsertLen)) stop("meanInsertLen is required")
+    if(missing(sdInsertLen)) stop("sdInsertLen is required")
     
     if (nrow(PhredScoreProfile) != readLen) {
         stop("The number of rows in PhredScoreProfile should be the same as", 

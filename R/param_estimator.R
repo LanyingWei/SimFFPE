@@ -42,7 +42,9 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
                              subsampleRegionLength=1e+5,
                              disableSubsampling=FALSE, threads=1,
                              calcPhredProfile=TRUE) {
-
+    
+    if(missing(bamFilePath)) stop("bamFilePath is required")
+    
     bamFile <- BamFile(bamFilePath)
     seqInfo <- scanBamHeader(bamFile)$targets
     
