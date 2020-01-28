@@ -11,7 +11,7 @@ within defined regions.
 \usage{
 targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile, 
 coverage, readLen, meanInsertLen, sdInsertLen, enzymeCut = FALSE,
-covRatioFFPE = 0.1, localMatchRatio = 0.08, padding = NA, minGap = NA,
+covRatioFFPE = 0.08, localMatchRatio = 0.1, padding = NA, minGap = NA,
 matchPadding = 5000, windowLen = 10000, matchWinLen = 10000, meanSeedLen = 5,
 sdSeedLen = 3, revChimericProb = 0.8, spikeWidth = 1500, mutationRate = 0.005,
 noiseRate = 0.0015, highNoiseRate = 0.08, highNoiseProb = 0.015,
