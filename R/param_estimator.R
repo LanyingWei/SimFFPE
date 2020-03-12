@@ -1,14 +1,12 @@
-calcPhredScoreProfile <- function(qual) {
+countPhredScores <- function(qual) {
     qual <- as.character(qual)
     qual <- lapply(qual, function(x) unlist(strsplit(x, "")))
     qual <- lapply(qual, function(x) {names(x) <- seq(1, length(x)); return(x)})
     qual <- as.data.frame(do.call("bind_rows", qual))
-    qualProb <- mapply("/", apply(qual, 2, table), apply(qual, 2, length),
-                       SIMPLIFY = FALSE)
+    qualProb <- apply(qual, 2, table)
     qualProb <- as.matrix(do.call("bind_rows", qualProb))
     qualProb <- qualProb[, order(phred2ASCIIOffset(colnames(qualProb)))]
     qualProb[is.na(qualProb)] <- 0
-    message('Calculation done.')
     return(qualProb)
 }
 
@@ -37,11 +35,10 @@ findReads <- function(bamFile,
 }
 
 
-estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
-                             targetRegions=NULL, subsampleRatio=NA,
-                             subsampleRegionLength=1e+5,
-                             disableSubsampling=FALSE, threads=1,
-                             calcPhredProfile=TRUE) {
+calcPhredScoreProfile <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
+                                  targetRegions=NULL, subsampleRatio=NA,
+                                  subsampleRegionLength=1e+5,
+                                  disableSubsampling=FALSE, threads=1) {
     
     if(missing(bamFilePath)) stop("bamFilePath is required")
     
@@ -58,6 +55,8 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
         disableSubsampling) {
         if (length(targetRegions) == 0) {
             regions <- GRanges(names(seqInfo), IRanges(1, seqInfo))
+            regions <- 
+                unlist(slidingWindows(regions, width=50000, step = 50000))
         } else {
             colnames(targetRegions) <- c("chr", "start", "end")
             regions <- GRanges(targetRegions$chr, IRanges(targetRegions$start,
@@ -112,72 +111,55 @@ estimateSimParam <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
                                       round(length(regions) * subsampleRatio))]
         }
     }
-    message("Subsample BAM file in ", length(regions), " regions.", 
+    message("Get reads from BAM file in ", length(regions), " regions.", 
             "\nUsing ", threads, " thread(s).")
     cl <- makeCluster(threads)
     registerDoParallel(cl)
-
-    if (calcPhredProfile) {
-        what = c("qual","isize", "flag", "qwidth")
-    } else {
-        what = c("isize", "flag", "qwidth")
-    }
 
     readInfo <- foreach(i = seq_along(regions),
                         .combine = "c",
                         .inorder = TRUE,
                         .verbose = FALSE,
+                        .errorhandling = "remove",
                         .packages = c("Biostrings", "dplyr",
                                       "GenomicRanges", "Rsamtools"),
-                        .export = c("findReads")
+                        .export = c("findReads", "countPhredScores")
     ) %dopar% {
-        findReads(bamFile,
-                  what = what,
-                  tag=c("NM"),
-                  which = regions[i],
-                  reverseComplement=TRUE,
-                  mapqFilter = mapqFilter)
+            temp <- findReads(bamFile,
+                              what = "qual",
+                              which = regions[i],
+                              reverseComplement=TRUE,
+                              mapqFilter = mapqFilter)
+            if (length(temp$qual) > 1) {
+                temp$qual <- countPhredScores(temp$qual)
+                return(temp)
+            }
     }
     stopCluster(cl)
-    insertSize <- unlist(unname(readInfo[names(readInfo) == "isize"]))
-    if (length(insertSize) == 0) {
+    quals <- unname(readInfo[names(readInfo) == "qual"])
+    if (length(quals) == 0) {
         stop("No reads found.")
     }
-    
-    readLen <- max(unlist(unname(readInfo[names(readInfo) == "qwidth"])),
-                   na.rm = TRUE)
-    medianIns <- median(insertSize[insertSize >= readLen], na.rm = TRUE)
-    MADIns <- mad(insertSize[insertSize >= readLen], na.rm = TRUE)
-    flag <- unlist(unname(readInfo[names(readInfo) == "flag"]))
-    isSupAlign <- vapply(flag, function(x) as.integer(intToBits(x))[12],
-                         numeric(1))
-    isProperPaired <- vapply(flag, function(x) as.integer(intToBits(x))[2],
-                             numeric(1))
-    supAlignProp <- sum(isSupAlign)/length(isSupAlign)
-    IPPProp <- sum(!isProperPaired) / length(isProperPaired)
-    NMTable <- table(unname(unlist(readInfo[names(readInfo) == "tag"])))
-    NMTable <- NMTable / sum(NMTable)
-    
-    message("Calculating based on ", length(insertSize), " reads...",
-            "\nRead length: ", readLen,
-            "\nEstimated median insert size (for insertsize >= read length): ",
-            medianIns,
-            "\nEstimated median absolute deviation of ",
-            "insert size (for insertsize >= read length): ", MADIns,
-            "\nEstimated proportion of supplementary alignment: ", 
-            supAlignProp,
-            "\nEstimated proportion of read NOT mapped in proper pair: ", 
-            IPPProp,
-            "\nEstimated proportion of supplementary alignments in reads ",
-            "NOT mapped in proper pair: ",
-            (sum(!isProperPaired & isSupAlign)) / sum(!isProperPaired),
-            "\nProportion of reads with N edit distance:",
-            paste0(capture.output(NMTable), collapse = "\n"))
-
-    if (calcPhredProfile) {
-        qual <- do.call("c", unname(readInfo[names(readInfo) == "qual"]))
-        qualProb <- calcPhredScoreProfile(qual)
-        return(qualProb)
+    readLen <- max(unlist(lapply(quals, nrow)))
+    PhredScores <- unique(unlist(lapply(quals, colnames)))
+    PhredScores <- PhredScores[order(phred2ASCIIOffset(PhredScores))]
+    for (i in seq_along(quals)) {
+        qual <- quals[[i]]
+        PhredScoreDiff <- setdiff(PhredScores, colnames(qual))
+        if (length(PhredScoreDiff) > 0 ) {
+            temp = matrix(0, nrow = nrow(qual), ncol = length(PhredScoreDiff))
+            colnames(temp) <- PhredScoreDiff
+            quals[[i]] <- cbind(qual, temp)
+            quals[[i]] <- quals[[i]][, PhredScores]
+        }
+        rowDiff <- readLen - nrow(qual)
+        if (rowDiff > 0) {
+            temp = matrix(0, nrow = rowDiff, ncol = length(PhredScores))
+            quals[[i]] <- rbind(quals[[i]], temp)
+        }
     }
+    qualProb <- Reduce("+", quals)
+    qualProb <- qualProb / rowSums(qualProb)
+    return(qualProb)
 }
 

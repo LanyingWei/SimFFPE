@@ -13,21 +13,20 @@
 \packageDESCRIPTION{SimFFPE}
 The NGS (Next-Generation Sequencing) reads from FFPE
 (Formalin-Fixed Paraffin-Embedded) samples contain numerous artificial chimeric
-reads. These reads are derived from the combination of two single-stranded DNA
-fragments with short reverse complementary sequences from nearby or distant
-regions. This package simulates these artifacts as well as normal reads for
-FFPE samples. The simulation can cover whole genome, or several chromosomes, or
-large regions, or whole exome, or targeted regions. It also supports
-enzymatic / random fragmentation and paired-end / single-end sequencing
-simulations. Fine-tuning can be performed for desired simulation results, and
-multi-threading can help reduce the runtime. Please check the package vignette
-for the guidance of fine-tuning.
-
+reads. These reads are derived from the combination of two single-stranded DNA 
+(ss-DNA) fragments with short reverse complementary sequences. The combined 
+ss-DNA may come from adjacent or distant regions. This package simulates these 
+artifacts as well as normal reads for FFPE samples. The simulation can cover 
+whole genome, or several chromosomes, or large regions, or whole exome, or 
+targeted regions. It also supports enzymatic / random fragmentation and 
+paired-end / single-end sequencing simulations. Fine-tuning can be performed 
+for desired simulation results, and multi-threading can help reduce the runtime. 
+Please check the package vignette for the guidance of fine-tuning.
 \packageIndices{SimFFPE}
 There are three available functions for NGS read simulation of FFPE samples:
 
-1. \code{\link{estimateSimParam}}: Estimate Phred score profile and other basic
-parameters for FFPE read simulation.
+1. \code{\link{calcPhredScoreProfile}}: Calculate positional Phred score profile 
+from BAM file for read simulation.
 
 2. \code{\link{readSimFFPE}}: Simulate noisy NGS reads of FFPE samples on whole
 genome, or several chromosomes, or large regions.
@@ -43,16 +42,14 @@ Maintainer: \packageMaintainer{SimFFPE}
 
 \keyword{ package }
 \seealso{
-\code{\link{estimateSimParam}}, \code{\link{readSimFFPE}},
+\code{\link{calcPhredScoreProfile}}, \code{\link{readSimFFPE}},
 \code{\link{targetReadSimFFPE}}
 }
 \examples{
 
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.rds",
                                      package = "SimFFPE")
-PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
-colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
-                                          nrows = 1, colClasses = "character")
+PhredScoreProfile <- readRDS(PhredScoreProfilePath)
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
@@ -61,24 +58,21 @@ reference <- readDNAStringSet(referencePath)
 
 sourceSeq <- reference[1:3]
 outFile1 <- paste0(tempdir(), "/sim1")
-readSimFFPE(sourceSeq, reference, PhredScoreProfile, outFile1, overWrite = TRUE,
-            coverage = 80, readLen = 150, meanInsertLen = 250, sdInsertLen = 80,
-            enzymeCut = TRUE, threads = 2)
-
+readSimFFPE(sourceSeq, referencePath, PhredScoreProfile, outFile1, 
+            coverage = 80, enzymeCut = TRUE, threads = 4)
 
 ## Simulate reads for targeted regions
 
 bamFilePath <- system.file("extdata", "example.bam", package = "SimFFPE")
 regionPath <- system.file("extdata", "regionsBam.txt", package = "SimFFPE")
 regions <- read.table(regionPath)
-PhredScoreProfile <- estimateSimParam(bamFilePath, calcPhredProfile = TRUE,
-                                      targetRegions = regions)
-                                      
+PhredScoreProfile <- calcPhredScoreProfile(bamFilePath, targetRegions = regions)
+
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")
 targetRegions <- read.table(regionPath)
 
 outFile <- paste0(tempdir(), "/sim2")
-targetReadSimFFPE(reference, PhredScoreProfile, targetRegions, outFile,
+targetReadSimFFPE(referencePath, PhredScoreProfile, targetRegions, outFile,
                   coverage = 120, readLen = 100, meanInsertLen = 150, 
                   sdInsertLen = 40, enzymeCut = FALSE)
 }

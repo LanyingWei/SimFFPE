@@ -1,19 +1,21 @@
-targetReadSimFFPE <- function(reference, PhredScoreProfile,
+targetReadSimFFPE <- function(referencePath, PhredScoreProfile,
                               targetRegions, outFile, coverage,
-                              readLen, meanInsertLen, sdInsertLen,
-                              enzymeCut=FALSE, covRatioFFPE=0.08,
-                              localMatchRatio=0.1,
-                              padding=NA, minGap=NA, matchPadding=5000,
-                              windowLen=10000, matchWinLen=10000,
-                              meanSeedLen=5, sdSeedLen=3,
-                              revChimericProb=0.8, spikeWidth=1500,
-                              mutationRate=0.005, noiseRate=0.0015,
-                              highNoiseRate=0.08, highNoiseProb=0.015,
-                              pairedEnd=TRUE, prefix="SimFFPE", threads=1,
+                              readLen=150, meanInsertLen=250, sdInsertLen=80,
+                              enzymeCut=FALSE, chimericRatio=0.08,
+                              localMatchRatio=0.1, padding=NA, 
+                              minGap=NA, windowLen=10000, matchWinLen=10000,
+                              meanLogSeedLen=1.7, sdLogSeedLen=0.4, 
+                              seedPassRate=0.78, sdTargetDist=120, 
+                              sameStrandProb=0.5, spikeWidth=1500, 
+                              betaShape1=0.5, betaShape2=0.5, 
+                              sameTarRegionProb=0, chimMutRate=0.005, 
+                              noiseRate=0.0015, highNoiseRate=0.08, 
+                              highNoiseProb=0.015, pairedEnd=TRUE, 
+                              prefix="SimFFPE", threads=1,
                               localChimeric=TRUE, distantChimeric=TRUE,
                               normalReads=TRUE, overWrite=FALSE) {
     
-    if(missing(reference)) stop("reference is required")
+    if(missing(referencePath)) stop("referencePath is required")
     if(missing(PhredScoreProfile)) stop("PhredScoreProfile is required")
     if(missing(targetRegions)) stop("targetRegions is required")
     if(missing(outFile)) stop("outFile is required")
@@ -21,6 +23,13 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
     if(missing(readLen)) stop("readLen is required")
     if(missing(meanInsertLen)) stop("meanInsertLen is required")
     if(missing(sdInsertLen)) stop("sdInsertLen is required")
+    
+    if(max(betaShape1, betaShape2) > 1) {
+        stop ("betaShape1 and betaShape2 should not be greater than 1")
+    }
+    if(min(betaShape1, betaShape2) <= 0) {
+        stop ("betaShape1 and betaShape2 should be greater than 0")
+    }
     
     if (nrow(PhredScoreProfile) != readLen) {
         stop("The number of rows in PhredScoreProfile should be the same as", 
@@ -31,13 +40,14 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
         overWriteFastq(outFile = outFile, pairedEnd = pairedEnd)
     }
 
-    covFFPE <- coverage * covRatioFFPE / 0.85
+    covFFPE <- coverage * chimericRatio / seedPassRate
     covNorm <- coverage - covFFPE
 
     if(!pairedEnd) {
         enzymeCut <- FALSE
     }
-
+    
+    reference <- readDNAStringSet(referencePath)
     reference <- reference[width(reference) >= matchWinLen]
     names(reference) <- unlist(lapply(names(reference),
                                       function(x) strsplit(x, " ")[[1]][1]))
@@ -67,6 +77,7 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
     nReadsLocal <- 0
     nReadsDistant <- 0
     nReadsNorm <- 0
+    matchPadding <- 5000
 
     cl <- makeCluster(threads)
     registerDoParallel(cl)
@@ -174,18 +185,19 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
                         targetEnd = targetEnd,
                         padding = paddingLen,
                         nSeed = nSeed,
-                        meanSeedLen = meanSeedLen,
-                        sdSeedLen = sdSeedLen,
+                        meanLogSeedLen = meanLogSeedLen,
+                        sdLogSeedLen = sdLogSeedLen,
+                        sdTargetDist = sdTargetDist,
                         meanInsertLen = meanInsertLen,
                         sdInsertLen = sdInsertLen,
                         enzymeCut = enzymeCut,
                         readLen = readLen,
-                        mutationRate = mutationRate,
+                        chimMutRate = chimMutRate,
                         noiseRate = noiseRate,
                         highNoiseRate = highNoiseRate,
                         highNoiseProb = highNoiseProb,
                         pairedEnd = pairedEnd,
-                        revChimericProb = revChimericProb)
+                        sameStrandProb = sameStrandProb)
                 }
                 readsToFastq(simReads = simReads,
                              PhredScoreProfile = PhredScoreProfile,
@@ -199,6 +211,7 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
                         " local chimeric reads ",
                         "on chromosome ", chr, ".")
                 nReadsLocal <- nReadsLocal + length(simReads)
+                simReads <- NULL
             }
 
             if (distantChimeric) {
@@ -229,25 +242,28 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
                 ) %dopar% {
                     generateDistantChimericReads(
                         fullSeq = fullSeq,
-                        reference = reference,
+                        referencePath = referencePath,
                         startPos = startPos,
                         windowLen = windowLen,
                         matchWinLen = matchWinLen,
                         nSeed = nSeed,
-                        meanSeedLen = meanSeedLen,
-                        sdSeedLen = sdSeedLen,
+                        meanLogSeedLen = meanLogSeedLen,
+                        sdLogSeedLen = sdLogSeedLen,
                         meanInsertLen = meanInsertLen,
                         sdInsertLen = sdInsertLen,
                         readLen = readLen,
                         allChr = allChr,
                         chrProb = chrProb,
-                        mutationRate = mutationRate,
+                        chimMutRate = chimMutRate,
                         noiseRate = noiseRate,
                         highNoiseRate = highNoiseRate,
                         highNoiseProb = highNoiseProb,
                         pairedEnd = pairedEnd,
                         spikeWidth = spikeWidth,
-                        revChimericProb = 0.5)
+                        betaShape1 = betaShape1,
+                        betaShape2 = betaShape2,
+                        sameTarRegionProb = sameTarRegionProb,
+                        sameStrandProb = 0.5)
                 }
                 readsToFastq(simReads = simReads,
                              PhredScoreProfile = PhredScoreProfile,
@@ -262,6 +278,7 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
                         " distant chimeric reads ",
                         "on chromosome ", chr, ".")
                 nReadsDistant <- nReadsDistant + length(simReads)
+                simReads <- NULL
             }
 
             if (normalReads) {
@@ -308,6 +325,7 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
                 message("Generated ", length(simReads), " normal reads ",
                         "on chromosome ", chr, ".")
                 nReadsNorm <- nReadsNorm + length(simReads)
+                simReads <- NULL
             }
         }
     }
@@ -318,3 +336,4 @@ targetReadSimFFPE <- function(reference, PhredScoreProfile,
             "\nAlltogether ", nReadsLocal + nReadsDistant + nReadsNorm,
             " reads were generated.", "\nSimulation done.")
 }
+

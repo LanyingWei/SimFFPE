@@ -1,8 +1,7 @@
 targetRegionalChimericSeqs <- function(seq, targetSeq, padding,
-                                       nSeed, meanSeedLen, sdSeedLen,
-                                       meanInsertLen, sdInsertLen,
-                                       readLen, revChimericProb, enzymeCut,
-                                       minSeedLen=2, maxSeedLen=20) {
+                                       nSeed, meanLogSeedLen, sdLogSeedLen,
+                                       sdTargetDist, meanInsertLen, sdInsertLen,
+                                       readLen, sameStrandProb, enzymeCut) {
     nSeed <- round(nSeed / 2)
     seqs <- list(seq, reverseComplement(seq))
     if (enzymeCut) {
@@ -10,10 +9,12 @@ targetRegionalChimericSeqs <- function(seq, targetSeq, padding,
     } else {
         chimericSeqs <- DNAStringSet()
     }
+    doubleMin <- .Machine$double.xmin
+    
     for (seq in seqs) {
         start <- sample(seq_along(seq), nSeed, replace = TRUE)
-        seedLen <- as.integer(
-            rtruncnorm(nSeed, minSeedLen, maxSeedLen, meanSeedLen, sdSeedLen))
+        seedLen <- round(rlnorm(nSeed, meanlog = meanLogSeedLen, 
+                                sdlog = sdLogSeedLen))
         end  <- start + seedLen - 1
         start <- start[end <= length(seq)]
         seedLen <- seedLen[end <= length(seq)]
@@ -32,19 +33,28 @@ targetRegionalChimericSeqs <- function(seq, targetSeq, padding,
             startList <- list()
             revMatch <- matchPDict(seeds, revSeq)
             startList[['revSeq']] <-  start(revMatch)
-            startList[['revSeqRev']] <-
-                length(seq) - end(revMatch) + padding + 1
-            nearestStart <- which.min(abs(startList[['revSeqRev']] - start))
-            revSeqStarts <- mapply(function(x, y) x[y],
-                                   startList[['revSeq']], nearestStart)
+            startList[['revSeqRev']] <- length(seq) - end(revMatch) + 1
+            dist <- abs(startList[['revSeqRev']] - start)
+            select <- lapply(dist, function(x) 
+                if (length(x) > 1) {
+                    sample(x, 1, 
+                           prob = dnorm(x, mean = 0, 
+                                        sd = sdTargetDist) + doubleMin)
+                } else x)
+            revSeqStarts <- mapply(function(x, y) x[y][1],
+                                   startList[['revSeq']], which(dist == select))
             startList[['compSeq']] <- start(matchPDict(seeds, compSeq))
-            notSameStart <-
-                which((startList[['compSeq']] - padding - start) != 0)
-            compSeqStarts <- (mapply(function(x, y) x[which.min(y)],
-                                     startList[['compSeq']], notSameStart))
-            is.na(compSeqStarts) <- lengths(compSeqStarts) == 0
-            compSeqStarts <- unlist(compSeqStarts)
-            whichRev <- runif(length(seeds)) <= revChimericProb
+            dist <- abs(startList[['compSeq']] - start)
+            select <- lapply(dist, function(x)
+                if (length(x) > 2) {
+                    sample(x[x!=0], 1, 
+                           prob = dnorm(x[x!=0], mean = 0, 
+                                        sd = sdTargetDist) + doubleMin)
+                } else x[x!=0])
+            compSeqStarts <- mapply(function(x, y) x[y][1],
+                                    startList[['compSeq']], 
+                                    which(dist == select))
+            whichRev <- runif(length(seeds)) <= sameStrandProb
             whichSeq <- NULL
             whichSeq[whichRev] <- "rev"
             whichSeq[!whichRev] <- "comp"
@@ -137,12 +147,12 @@ targetRegionalChimericSeqs <- function(seq, targetSeq, padding,
 
 targetRegionalChimericReads <- function(fullSeq, startPos, endPos,
                                         targetStart, targetEnd, padding,
-                                        nSeed, meanSeedLen, sdSeedLen,
-                                        meanInsertLen, sdInsertLen,
-                                        enzymeCut, readLen, targetPadding,
-                                        mutationRate, noiseRate,
+                                        nSeed, meanLogSeedLen, sdLogSeedLen,
+                                        sdTargetDist, meanInsertLen, 
+                                        sdInsertLen, enzymeCut, readLen, 
+                                        targetPadding, chimMutRate, noiseRate,
                                         highNoiseRate, highNoiseProb,
-                                        pairedEnd, revChimericProb) {
+                                        pairedEnd, sameStrandProb) {
 
     tempseq <- fullSeq[startPos:endPos]
     targetSeq <- fullSeq[targetStart:targetEnd]
@@ -153,16 +163,17 @@ targetRegionalChimericReads <- function(fullSeq, startPos, endPos,
                                        targetSeq = targetSeq,
                                        padding = padding,
                                        nSeed = nSeed,
-                                       meanSeedLen = meanSeedLen,
-                                       sdSeedLen = sdSeedLen,
+                                       meanLogSeedLen = meanLogSeedLen,
+                                       sdLogSeedLen = sdLogSeedLen,
+                                       sdTargetDist = sdTargetDist,
                                        meanInsertLen = meanInsertLen,
                                        sdInsertLen = sdInsertLen,
                                        readLen = readLen,
                                        enzymeCut = enzymeCut,
-                                       revChimericProb = revChimericProb)
+                                       sameStrandProb = sameStrandProb)
 
         if(length(chimericSeqs) != 0) {
-            chimericSeqs <- addRandomMutation(chimericSeqs, mutationRate)
+            chimericSeqs <- addRandomMutation(chimericSeqs, chimMutRate)
             simReads <- generateReads(seqs = chimericSeqs,
                                       readLen = readLen,
                                       noiseRate = noiseRate,

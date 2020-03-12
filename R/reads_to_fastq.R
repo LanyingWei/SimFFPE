@@ -1,5 +1,5 @@
 readsToFastq <- function(simReads, PhredScoreProfile, prefix, prefix2,
-                         chr, outFile, pairedEnd, threads) {
+                         chr, outFile, pairedEnd, threads, firstID=1) {
     if (length(simReads) > 0) {
         PhredScores <- generatePhredScores(
             nReads = length(simReads),
@@ -12,6 +12,7 @@ readsToFastq <- function(simReads, PhredScoreProfile, prefix, prefix2,
                                            prefix, '-',
                                            prefix2, '-',
                                            chr),
+                                       firstID = firstID,
                                        pairedEnd = pairedEnd)
 
         writeReadsToFastq(simReads = simReads, PhredScores = PhredScores,
