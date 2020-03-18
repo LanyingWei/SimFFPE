@@ -49,7 +49,10 @@ Maintainer: \packageMaintainer{SimFFPE}
 
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.rds",
                                      package = "SimFFPE")
-PhredScoreProfile <- readRDS(PhredScoreProfilePath)
+PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
+colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
+                                          nrows = 1, 
+                                          colClasses = "character")
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
