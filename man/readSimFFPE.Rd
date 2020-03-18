@@ -112,13 +112,13 @@ scale; therefore, a defined width is used for simulation. Suggested range:
 1500-2000. Unit: base pair (bp).
 }
   \item{betaShape1}{
-Shape parameter α of beta distribution used to model the unevenly distributed
+Shape parameter a of beta distribution used to model the unevenly distributed
 distant ss-DNA combinations. The number of seeds in each "spike" follows a "U" 
 shaped beta distribution. Use this parameter to adjust the shape of the curve. 
 See \code{\link[stats]{rbeta}} for more details. Range: 0-1.
 }
   \item{betaShape2}{
-Shape parameter β of beta distribution used to model the unevenly distributed
+Shape parameter b of beta distribution used to model the unevenly distributed
 distant ss-DNA combinations. The number of seeds in each "spike" follows a "U" 
 shaped beta distribution. Use this parameter to adjust the shape of the curve. 
 See \code{\link[stats]{rbeta}} for more details. Range: 0-1.
