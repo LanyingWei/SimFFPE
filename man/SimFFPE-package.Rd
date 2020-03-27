@@ -47,7 +47,7 @@ Maintainer: \packageMaintainer{SimFFPE}
 }
 \examples{
 
-PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.rds",
+PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
 PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
 colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
