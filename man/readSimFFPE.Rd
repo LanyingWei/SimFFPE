@@ -238,7 +238,7 @@ readSimFFPE(sourceSeq2, referencePath, PhredScoreProfile, outFile2,
 
 sourceSeq3 <- DNAStringSet(lapply(reference[2:3], function(x) x[1:10000]))
 readSimFFPE(sourceSeq3, referencePath, PhredScoreProfile, outFile2,
-            overWrite = FALSE, prefix = "simFFPE2", coverage = 80,
-            enzymeCut = TRUE, threads = 1, overWrite = FALSE)
+            prefix = "simFFPE2", coverage = 80, enzymeCut = TRUE, 
+            threads = 1, overWrite = FALSE)
 }
 
