@@ -1,7 +1,9 @@
-generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSeedLen, 
-                                         sdLogSeedLen, meanInsertLen, 
-                                         sdInsertLen, sdTargetDist,
-                                         sameStrandProb, enzymeCut, readLen) {
+generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSRCRLen, 
+                                         sdLogSRCRLen, maxSRCRLen, 
+                                         meanInsertLen, sdInsertLen, 
+                                         meanLogSRCRDist, sdLogSRCRDist, 
+                                         sameStrandProp, enzymeCut, readLen,
+                                         targetPadding = 0) {
     nSeed <- round(nSeed / 2)
     seqs <- list(seq, reverseComplement(seq))
     if (enzymeCut) {
@@ -12,16 +14,23 @@ generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSeedLen,
     doubleMin <- .Machine$double.xmin
     
     for (seq in seqs) {
-        seedLen <- round(rlnorm(nSeed, meanlog = meanLogSeedLen, 
-                                sdlog = sdLogSeedLen))
+        SRCRLen <- round(rlnorm(nSeed, meanlog = meanLogSRCRLen, 
+                                sdlog = sdLogSRCRLen))
+        SRCRLen <- SRCRLen[SRCRLen > 0 & SRCRLen <= maxSRCRLen]
+        while(length(SRCRLen) < nSeed) {
+            SRCRLen <- c(SRCRLen, round(rlnorm(nSeed, meanlog = meanLogSRCRLen, 
+                                               sdlog = sdLogSRCRLen)))
+            SRCRLen <- SRCRLen[SRCRLen > 0 & SRCRLen <= maxSRCRLen]
+        }
+        SRCRLen <- SRCRLen[seq_len(nSeed)]
         
-        start <- sample(seq_len(length(seq) - max(seedLen) + 1),
+                            (length(seq) - targetPadding - max(SRCRLen) + 1),
                         nSeed, replace = TRUE)
         revSeq <- reverse(seq)
         compSeq <- complement(seq)
 
         seeds <- extractAt(x = compSeq,
-                           at = IRanges(start = start, width = seedLen))
+                           at = IRanges(start = start, width = SRCRLen))
 
         start <- start[!grepl('N', seeds)]
         seeds <- seeds[!grepl('N', seeds)]
@@ -31,28 +40,28 @@ generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSeedLen,
             startList <- list()
             revMatch <- matchPDict(seeds, revSeq)
             startList[['revSeq']] <-  start(revMatch)
-            startList[['revSeqRev']] <- length(seq) - end(revMatch) + 1
-            dist <- startList[['revSeqRev']] - start
+            startList[['revSeqRev']] <- length(revSeq) - end(revMatch) + 1
+            dist <- abs(startList[['revSeqRev']] - start)
             select <- lapply(dist, function(x)
                 if (length(x) > 1) {
                     sample(x, 1, 
-                           prob = dnorm(x, mean = 0, 
-                                        sd = sdTargetDist) + doubleMin)
+                           prob = dlnorm(x, meanlog = meanLogSRCRDist, 
+                                         sdlog = sdLogSRCRDist) + doubleMin)
                 } else x)
             revSeqStarts <- mapply(function(x, y) x[y][1],
                                    startList[['revSeq']], which(dist == select))
             startList[['compSeq']] <- start(matchPDict(seeds, compSeq))
-            dist <- startList[['compSeq']] - start
+            dist <- abs(startList[['compSeq']] - start)
             select <- lapply(dist, function(x)
                 if (length(x) > 2) {
                     sample(x[x!=0], 1, 
-                           prob = dnorm(x[x!=0], mean = 0, 
-                                        sd = sdTargetDist) + doubleMin)
+                           prob = dlnorm(x[x!=0], meanlog = meanLogSRCRDist, 
+                                         sdlog = sdLogSRCRDist) + doubleMin)
                 } else x[x!=0])
             compSeqStarts <- mapply(function(x, y) x[y][1],
                                     startList[['compSeq']], 
                                     which(dist == select))
-            whichRev <- runif(length(seeds)) <= sameStrandProb
+            whichRev <- runif(length(seeds)) <= sameStrandProp
             whichSeq <- NULL
             whichSeq[whichRev] <- "rev"
             whichSeq[!whichRev] <- "comp"
@@ -107,8 +116,8 @@ generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSeedLen,
             targetFragLens <- fragLens - mapLens - sourceFragLens
 
             sourceFragStarts <- start - sourceFragLens
-            sourceFragEnds <- start + mapLens - 1
-            targetFragStarts <- seqStarts + mapLens
+            sourceFragEnds <- start - 1
+            targetFragStarts <- seqStarts
             targetFragEnds <- seqStarts + mapLens + targetFragLens - 1
             keep <- sourceFragStarts > 0 & sourceFragEnds <= length(seq) &
                 targetFragStarts > 0 & targetFragEnds <= length(seq)
@@ -145,32 +154,28 @@ generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSeedLen,
 
 
 
-generateRegionalChimericReads <- function(fullSeq, startPos, windowLen,
-                                          nSeed, meanLogSeedLen, sdLogSeedLen,
-                                          sdTargetDist, meanInsertLen, 
-                                          sdInsertLen, enzymeCut, readLen, 
-                                          chimMutRate, noiseRate, highNoiseRate, 
-                                          highNoiseProb, pairedEnd, 
-                                          sameStrandProb) {
+generateRegionalChimericReads <- function(seq, nSeed, meanLogSRCRLen, 
+                                          sdLogSRCRLen, maxSRCRLen, 
+                                          meanLogSRCRDist, sdLogSRCRDist, 
+                                          meanInsertLen, sdInsertLen, enzymeCut, 
+                                          readLen, chimMutRate, noiseRate, 
+                                          highNoiseRate, highNoiseProp, 
+                                          pairedEnd, sameStrandProp) {
 
-    if ((startPos + windowLen - 1) <= length(fullSeq)) {
-        tempSeq <- fullSeq[startPos:(startPos + windowLen - 1)]
-    } else {
-        tempSeq <- fullSeq[startPos:length(fullSeq)]
-        nSeed <- round(length(tempSeq) / windowLen * nSeed)
-    }
-    if (length(tempSeq) >= readLen && nSeed > 1) {
+    if (length(seq) >= readLen && nSeed > 1) {
         chimericSeqs <-
-            generateRegionalChimericSeqs(seq = tempSeq,
+            generateRegionalChimericSeqs(seq = seq,
                                          nSeed = nSeed,
-                                         meanLogSeedLen = meanLogSeedLen,
-                                         sdLogSeedLen = sdLogSeedLen,
-                                         sdTargetDist = sdTargetDist,
+                                         meanLogSRCRLen = meanLogSRCRLen,
+                                         sdLogSRCRLen = sdLogSRCRLen,
+                                         maxSRCRLen = maxSRCRLen,
+                                         meanLogSRCRDist = meanLogSRCRDist,
+                                         sdLogSRCRDist = sdLogSRCRDist,
                                          meanInsertLen = meanInsertLen,
                                          sdInsertLen = sdInsertLen,
                                          readLen = readLen,
                                          enzymeCut = enzymeCut,
-                                         sameStrandProb = sameStrandProb)
+                                         sameStrandProp = sameStrandProp)
 
         if(length(chimericSeqs) != 0) {
             chimericSeqs <- addRandomMutation(chimericSeqs, chimMutRate)
@@ -178,7 +183,7 @@ generateRegionalChimericReads <- function(fullSeq, startPos, windowLen,
                                       readLen = readLen,
                                       noiseRate = noiseRate,
                                       highNoiseRate = highNoiseRate,
-                                      highNoiseProb = highNoiseProb,
+                                      highNoiseProp = highNoiseProp,
                                       pairedEnd = pairedEnd)
             return(simReads)
         }
@@ -187,10 +192,10 @@ generateRegionalChimericReads <- function(fullSeq, startPos, windowLen,
 
 
 generateDistantChimericSeqs <- function(seq, reference, nSeed, 
-                                        meanLogSeedLen, sdLogSeedLen, 
-                                        meanInsertLen, sdInsertLen,
-                                        allChr, chrProb, matchWinLen, readLen,
-                                        sameStrandProb, spikeWidth,  betaShape1, 
+                                        meanLogSRCRLen, sdLogSRCRLen, 
+                                        maxSRCRLen, meanInsertLen, sdInsertLen,
+                                        allChr, chrProb, distWinLen, readLen,
+                                        sameStrandProp, spikeWidth,  betaShape1, 
                                         betaShape2, sameTarRegionProb) {
     chimericSeqs <- DNAStringSet()
     seqs <- list(seq, reverseComplement(seq))
@@ -201,7 +206,8 @@ generateDistantChimericSeqs <- function(seq, reference, nSeed,
     for (j in seq_along(seqs)) {
         seq <- seqs[[j]]
         if (length(seq) <= spikeWidth) {
-            start <- sample(seq_along(seq), nSeed * rbetas[1], replace = TRUE)
+            start <- sample(seq_along(seq), round(nSeed * rbetas[1]), 
+                            replace = TRUE)
         } else {
             start <- NULL
             nSpikeSeed <- nSeed / length(spikeStarts)
@@ -224,10 +230,18 @@ generateDistantChimericSeqs <- function(seq, reference, nSeed,
         
         start <- sort(start)
         
-        seedLen <- round(rlnorm(length(start), meanlog = meanLogSeedLen, 
-                                sdlog = sdLogSeedLen))
+        SRCRLen <- round(rlnorm(length(start), meanlog = meanLogSRCRLen, 
+                                sdlog = sdLogSRCRLen))
+        SRCRLen <- SRCRLen[SRCRLen > 0 & SRCRLen <= maxSRCRLen]
+        while(length(SRCRLen) < length(start)) {
+            SRCRLen <- c(SRCRLen, round(rlnorm(length(start), 
+                                               meanlog = meanLogSRCRLen, 
+                                               sdlog = sdLogSRCRLen)))
+            SRCRLen <- SRCRLen[SRCRLen > 0 & SRCRLen <= maxSRCRLen]
+        }
+        SRCRLen <- SRCRLen[seq_len(length(start))]
         
-        end <- start + seedLen - 1
+        end <- start + SRCRLen - 1
         start <- start[end <= length(seq)]
         end <- end[end <= length(seq)]
 
@@ -242,24 +256,24 @@ generateDistantChimericSeqs <- function(seq, reference, nSeed,
             targetSeqs <- 
                 generateTargetSeqs(reference, nSeqs = length(seeds),
                                    allChr = allChr, chrProb = chrProb,
-                                   matchWinLen = matchWinLen, 
+                                   distWinLen = distWinLen, 
                                    sameTarRegionProb = sameTarRegionProb)
             if (j == 2) {
                 targetSeqs <- reverseComplement(targetSeqs)
             }
             revSeqs <- reverse(targetSeqs)
             compSeqs <- complement(targetSeqs)
-
+            
             revSeqStarts <- mapply(function(x, y) {
                 tmp <- start(matchPattern(x, y))
-                if (length(tmp) != 0) sample(tmp, 1) else NA
-                }, seeds, revSeqs)
+                if (length(tmp) != 0) tmp[1] else NA
+            }, seeds, revSeqs)
             compSeqStarts <- mapply(function(x, y) {
                 tmp <- start(matchPattern(x, y))
-                if (length(tmp) != 0) sample(tmp, 1) else NA
-                }, seeds, compSeqs)
+                if (length(tmp) != 0) tmp[1] else NA
+            }, seeds, compSeqs)
             
-            whichRev <- runif(length(seeds)) <= sameStrandProb
+            whichRev <- runif(length(seeds)) <= sameStrandProp
             whichSeq <- NULL
             whichSeq[whichRev] <- "rev"
             whichSeq[!whichRev] <- "comp"
@@ -272,7 +286,6 @@ generateDistantChimericSeqs <- function(seq, reference, nSeed,
             noSeqStarts <- is.na(seqStarts)
             seqStarts[noSeqStarts] <-  compSeqStarts[noSeqStarts]
             whichSeq[noSeqStarts & !(is.na(seqStarts))] <- "comp"
-
             keep <- !is.na(seqStarts)
             seeds <- seeds[keep]
             whichSeq <- whichSeq[keep]
@@ -292,8 +305,8 @@ generateDistantChimericSeqs <- function(seq, reference, nSeed,
             targetFragLens <- fragLens - mapLens - sourceFragLens
 
             sourceFragStarts <- start - sourceFragLens
-            sourceFragEnds <- start + mapLens - 1
-            targetFragStarts <- seqStarts + mapLens
+            sourceFragEnds <- start - 1
+            targetFragStarts <- seqStarts
             targetFragEnds <- seqStarts + mapLens + targetFragLens - 1
             keep <- sourceFragStarts > 0 & sourceFragEnds <= length(seq) &
                 targetFragStarts > 0 & targetFragEnds <= width(revSeqs)
@@ -327,16 +340,16 @@ generateDistantChimericSeqs <- function(seq, reference, nSeed,
 }
 
 generateDistantChimericReads <- function(fullSeq, referencePath, startPos,
-                                         windowLen, matchWinLen,
-                                         nSeed, meanLogSeedLen, sdLogSeedLen,
-                                         meanInsertLen, sdInsertLen, readLen,
-                                         allChr, chrProb, chimMutRate,
+                                         windowLen, distWinLen, nSeed, 
+                                         meanLogSRCRLen, sdLogSRCRLen, 
+                                         maxSRCRLen, meanInsertLen, sdInsertLen, 
+                                         readLen, allChr, chrProb, chimMutRate,
                                          noiseRate, highNoiseRate,
-                                         highNoiseProb, pairedEnd, spikeWidth,
+                                         highNoiseProp, pairedEnd, spikeWidth,
                                          betaShape1, betaShape2, 
-                                         sameTarRegionProb, sameStrandProb) {
+                                         sameTarRegionProb, sameStrandProp) {
     reference <- readDNAStringSet(referencePath)
-    reference <- reference[width(reference) >= matchWinLen]
+    reference <- reference[width(reference) >= distWinLen]
     
     names(reference) <- unlist(lapply(names(reference),
                                       function(x) strsplit(x, " ")[[1]][1]))
@@ -354,17 +367,18 @@ generateDistantChimericReads <- function(fullSeq, referencePath, startPos,
                                         reference = reference,
                                         allChr = allChr,
                                         chrProb = chrProb,
-                                        matchWinLen = matchWinLen,
+                                        distWinLen = distWinLen,
                                         nSeed = nSeed,
-                                        meanLogSeedLen = meanLogSeedLen,
-                                        sdLogSeedLen = sdLogSeedLen,
+                                        meanLogSRCRLen = meanLogSRCRLen,
+                                        sdLogSRCRLen = sdLogSRCRLen,
+                                        maxSRCRLen = maxSRCRLen,
                                         meanInsertLen = meanInsertLen,
                                         sdInsertLen = sdInsertLen,
                                         readLen = readLen,
                                         spikeWidth = spikeWidth,
                                         betaShape1 = betaShape1, 
                                         betaShape2 = betaShape2,
-                                        sameStrandProb = sameStrandProb,
+                                        sameStrandProp = sameStrandProp,
                                         sameTarRegionProb = sameTarRegionProb)
 
         if(length(chimericSeqs) != 0) {
@@ -374,7 +388,7 @@ generateDistantChimericReads <- function(fullSeq, referencePath, startPos,
                                       readLen = readLen,
                                       noiseRate = noiseRate,
                                       highNoiseRate = highNoiseRate,
-                                      highNoiseProb = highNoiseProb,
+                                      highNoiseProp = highNoiseProp,
                                       pairedEnd = pairedEnd)
             return(simReads)
         }
@@ -382,7 +396,7 @@ generateDistantChimericReads <- function(fullSeq, referencePath, startPos,
 }
 
 generateTargetSeqs <- function(reference, nSeqs, allChr, chrProb, 
-                               matchWinLen, sameTarRegionProb) {
+                               distWinLen, sameTarRegionProb) {
     targetSeqsAll <- DNAStringSet()
     while (length(targetSeqsAll) < nSeqs) {
         targetChrs <- sample(allChr,
@@ -392,9 +406,9 @@ generateTargetSeqs <- function(reference, nSeqs, allChr, chrProb,
         targetChrs <- table(targetChrs)
         for (chr in names(targetChrs)) {
             startPoses <-
-                sample(seq_len(length(reference[[chr]]) - matchWinLen + 1),
+                sample(seq_len(length(reference[[chr]]) - distWinLen + 1),
                        targetChrs[chr], replace = TRUE)
-            endPoses <- startPoses + matchWinLen - 1
+            endPoses <- startPoses + distWinLen - 1
             targetSeqs <- extractAt(x = reference[[chr]],
                                     at = IRanges(start = startPoses,
                                                  end = endPoses))

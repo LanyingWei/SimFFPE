@@ -1,12 +1,16 @@
 Package: SimFFPE
 Type: Package
 Title: NGS Read Simulator for FFPE Tissue
-Version: 1.3.0
-Author: Lanying Wei
-Maintainer: Lanying Wei <lanying.wei@uni-muenster.de>
-Description: This package simulates artifact chimeric reads specifically generated 
-    in next-generation sequencing (NGS) process of formalin-fixed paraffin-embedded 
-    (FFPE) tissue.
+Version: 1.4.0
+Authors@R: person("Lanying", "Wei", email="lanying.wei@uni-muenster.de",
+    role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4281-8017"))
+Description: The NGS (Next-Generation Sequencing) reads from FFPE 
+    (Formalin-Fixed Paraffin-Embedded) samples contain numerous artifact 
+    chimeric reads (ACRS), which can lead to false positive structural variant 
+    calls. These ACRs are derived from the combination of two single-stranded 
+    DNA (ss-DNA) fragments with short reverse complementary regions (SRCRs). 
+    This package simulates these artifact chimeric reads as well as normal reads 
+    for FFPE samples on the whole genome / several chromosomes / large regions.
 License: LGPL-3
 Encoding: UTF-8
 Depends: Biostrings

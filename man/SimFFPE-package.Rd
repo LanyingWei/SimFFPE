@@ -11,28 +11,33 @@
 \details{
 
 \packageDESCRIPTION{SimFFPE}
-The NGS (Next-Generation Sequencing) reads from FFPE
-(Formalin-Fixed Paraffin-Embedded) samples contain numerous artificial chimeric
-reads. These reads are derived from the combination of two single-stranded DNA 
-(ss-DNA) fragments with short reverse complementary sequences. The combined 
-ss-DNA may come from adjacent or distant regions. This package simulates these 
-artifacts as well as normal reads for FFPE samples. The simulation can cover 
-whole genome, or several chromosomes, or large regions, or whole exome, or 
-targeted regions. It also supports enzymatic / random fragmentation and 
-paired-end / single-end sequencing simulations. Fine-tuning can be performed 
-for desired simulation results, and multi-threading can help reduce the runtime. 
-Please check the package vignette for the guidance of fine-tuning.
-\packageIndices{SimFFPE}
+The NGS (Next-Generation Sequencing) reads from FFPE (Formalin-Fixed 
+Paraffin-Embedded) samples contain numerous artifact chimeric reads (ACRs), 
+which can lead to false positive structural variant calls. These ACRs are 
+derived from the combination of two single-stranded DNA (ss-DNA) fragments with 
+short reverse complementary regions (SRCR). This package simulates these 
+artifact chimeric reads as well as normal reads for FFPE samples. To simplify 
+the simulation, the genome is divided into small windows, and SRCRs are found 
+within the same window (adjacent ss-DNA combination) or between different 
+windows (distant ss-DNA simulation). For adjacent ss-DNA combination events, the
+original genomic distance between and strands of two combined SRCRs are also 
+simulated based on real data. The simulation can cover whole genome, or several 
+chromosomes, or large regions, or whole exome, or targeted regions. It also 
+supports enzymatic / random fragmentation and paired-end / single-end sequencing
+simulations. Fine-tuning can be achieved by adjusting the parameters, and 
+multi-threading is surported. Please check the package vignette for the guidance
+of fine-tuning \packageIndices{SimFFPE}.
+
 There are three available functions for NGS read simulation of FFPE samples:
 
 1. \code{\link{calcPhredScoreProfile}}: Calculate positional Phred score profile 
 from BAM file for read simulation.
 
-2. \code{\link{readSimFFPE}}: Simulate noisy NGS reads of FFPE samples on whole
-genome, or several chromosomes, or large regions.
+2. \code{\link{readSimFFPE}}: Simulate artifact chimeric reads on whole genome, 
+or several chromosomes, or large regions.
 
-3. \code{\link{targetReadSimFFPE}}: Simulate noisy NGS reads of FFPE samples in
-exonic / targeted regions.
+3. \code{\link{targetReadSimFFPE}}: Simulate artifact chimeric reads in exonic / 
+targeted regions.
 }
 \author{
 \packageAuthor{SimFFPE}
@@ -50,9 +55,8 @@ Maintainer: \packageMaintainer{SimFFPE}
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile2.txt",
                                      package = "SimFFPE")
 PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
-colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
-                                          nrows = 1, 
-                                          colClasses = "character")
+colnames(PhredScoreProfile)  <- 
+    strsplit(readLines(PhredScoreProfilePath)[1], "\t")[[1]]
 
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 reference <- readDNAStringSet(referencePath)
@@ -62,7 +66,7 @@ reference <- readDNAStringSet(referencePath)
 sourceSeq <- reference[1:3]
 outFile1 <- paste0(tempdir(), "/sim1")
 readSimFFPE(sourceSeq, referencePath, PhredScoreProfile, outFile1, 
-            coverage = 80, enzymeCut = TRUE, threads = 4)
+            coverage = 80, enzymeCut = TRUE, threads = 2)
 
 ## Simulate reads for targeted regions
 
@@ -76,6 +80,6 @@ targetRegions <- read.table(regionPath)
 
 outFile <- paste0(tempdir(), "/sim2")
 targetReadSimFFPE(referencePath, PhredScoreProfile, targetRegions, outFile,
-                  coverage = 120, readLen = 100, meanInsertLen = 150, 
-                  sdInsertLen = 40, enzymeCut = FALSE)
+                  coverage = 80, readLen = 100, meanInsertLen = 180, 
+                  sdInsertLen = 50, enzymeCut = FALSE)
 }

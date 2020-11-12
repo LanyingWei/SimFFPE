@@ -1,25 +1,29 @@
 \name{targetReadSimFFPE}
 \alias{targetReadSimFFPE}
 \title{
-Simulate noisy NGS reads of FFPE samples in exonic / targeted regions
+Simulate normal and artifact chimeric reads in NGS data of FFPE samples for 
+exonic / targeted regions
 }
 \description{
-NGS data from FFPE samples contain numerous artificial chimeric reads. These 
+NGS data from FFPE samples contain numerous artifact chimeric reads. These 
 chimeric reads are formed through the combination of two single-stranded DNA 
-(ss-DNA). This function simulates these artificial reads as well as normal reads 
-for FFPE samples within defined regions.
+(ss-DNA) with short reverse complementary regions (SRCR). This function 
+simulates these artifact chimeric reads as well as normal reads for FFPE samples 
+within defined regions. To simplify the simulation, the genome is divided into 
+small windows, and SRCRs are found within the same window (adjacent ss-DNA 
+combination) or between different windows (distant ss-DNA simulation).
 }
 \usage{
 targetReadSimFFPE(referencePath, PhredScoreProfile, targetRegions, outFile, 
-coverage, readLen = 150, meanInsertLen = 250, sdInsertLen = 80, 
-enzymeCut = FALSE, chimericRatio = 0.08, localMatchRatio = 0.1, padding = NA, 
-minGap = NA, windowLen = 10000, matchWinLen = 10000, 
-meanLogSeedLen = 1.7, sdLogSeedLen = 0.4, seedPassRate = 0.78, sdTargetDist=120,
-sameStrandProb = 0.5, spikeWidth = 1500, betaShape1 = 0.5, betaShape2 = 0.5, 
-sameTarRegionProb = 0, chimMutRate = 0.005, noiseRate = 0.0015, 
-highNoiseRate = 0.08, highNoiseProb = 0.015, pairedEnd = TRUE, 
-prefix = "SimFFPE", threads = 1, localChimeric = TRUE, 
-distantChimeric = TRUE, normalReads = TRUE, overWrite = FALSE)
+coverage, readLen=150, meanInsertLen=250, sdInsertLen=80, enzymeCut=FALSE, 
+padding=50, minGap=5, chimericProp=0.1, sameChrProp=0.43, windowLen=5000, 
+adjChimProp=0.63, sameStrandProp=0.65, meanLogSRCRLen=1.8, sdLogSRCRLen=0.55, 
+maxSRCRLen=32, meanLogSRCRDist=4.7, sdLogSRCRDist=0.35, distWinLen=5000, 
+spikeWidth=1500, betaShape1=0.5, betaShape2=0.5, sameTarRegionProb=0, 
+adjFactor = 1.3, distFactor = 1.3, chimMutRate=0.003,  noiseRate=0.0015, 
+highNoiseRate=0.08, highNoiseProp=0.01, pairedEnd=TRUE, prefix="SimFFPE", 
+threads=1, adjChimeric=TRUE, distChimeric=TRUE, normalReads=TRUE, 
+overWrite=FALSE)
 }
 \arguments{
   \item{referencePath}{
@@ -57,63 +61,68 @@ Standard deviation of the insert length for simulation (normally distributed).
 Simulate enzymatic fragmentation if it is set to true, otherwise simulate random
 fragmentation.
 }
-  \item{chimericRatio}{
-Proportion of artificial chimeric fragments (chimeric fragments / chimeric or 
-normal fragments). Range: 0 to 1.
-}
-  \item{localMatchRatio}{
-Proportion of adjacent ss-DNA combination (adjacent ss-DNA combination / 
-adjacent or distant ss-DNA combination). Range: 0 to 1.
-}
   \item{padding}{
 Length of padding of input target regions. The padding length will be added to 
-both sides of target regions. If this value is not given, it will be assigned 
-the value of input meanInsertLen divided by two. Range: natural numbers. Unit: 
-base pair (bp).
+both sides of target regions. Range: natural numbers. Unit: base pair (bp).
 }
   \item{minGap}{
 Minimal allowed length of gap between target regions. Regions with a gap smaller
 than this value will be merged. If this value is not given, the value of input
 readLen will be used. Range: natural numbers. Unit: base pair (bp).
 }
+  \item{chimericProp}{
+Proportion of artifact chimeric fragments (chimeric fragments / chimeric or 
+normal fragments). Range: 0 to 1.
+}
+  \item{sameChrProp}{
+Proportion of artifact chimeric fragments that are derived from the combination 
+of two ss-DNA coming from the same chromosome. Range: 0 to 1.
+}
   \item{windowLen}{
 The window length used in adjacent ss-DNA combination simulation. To simulate 
 adjacent ss-DNA combinations, input DNA sequences are divided into small windows 
-of equal size, and short complementary pairs are searched within the same window
-. Suggested range: 5000-20000. Unit: base pair (bp).
+of equal size, and short reverse complementary regions are searched within the 
+same window to form artifact chimeric fragments. Unit: base pair (bp).
 }
-  \item{matchWinLen}{
-The target window length used in distant ss-DNA simulation. To simulate distant 
-ss-DNA combinations, the target sequences are searched in a random window. 
-Suggested range: 5000-20000. Unit: base pair (bp).
+  \item{adjChimProp}{
+Proportion of adjacent ss-DNA combinations among same chromosomal ss-DNA 
+combinations. Range: 0 to 1.
 }
-  \item{meanLogSeedLen}{
-Mean of log scaled seed length (bp). Seeds are used to search for complementary 
-targets. The mapping of seed and target links two ss-DNA together, yielding 
-artificial chimeric fragments. The seed length follows a log-normal distribution
-. See \code{\link[stats]{rlnorm}} for more details.
+  \item{sameStrandProp}{
+Proportion of same-strand ss-DNA combinations among adjacent ss-DNA combinations
+. For paired end sequencing, the larger the proportion, the greater the 
+proportion of improperly paired reads with LL / RR pair orientation, and the 
+smaller the proportion with RL pair orientation. Range: 0 to 1.
 }
-  \item{sdLogSeedLen}{
-Standard deviation of log scaled seed length (bp).
+  \item{meanLogSRCRLen}{
+Mean of log scaled length of the short reverse complementary regions (SRCR) in 
+artifact chimeric fragments. SRCRs links two ss-DNA together, yielding artifact 
+chimeric fragments. The length of SRCR follows a log-normal distribution. See 
+\code{\link[stats]{rlnorm}} for more details. Unit: base pair (bp).
 }
-  \item{seedPassRate}{
-Proportion of seeds successfully forming chimeric fragments. Adjust this value 
-when the percentage of chimeric reads in the output file is different from 
-the parameter "chimericRatio".
+  \item{sdLogSRCRLen}{
+Standard deviation of log scaled length of the short reverse complementary 
+regions.
 }
-  \item{sdTargetDist}{
-Standard deviation of the normal distribution (mean = 0) used to simulate target 
-selection probability. In adjacent ss-DNA combinations, when there are multiple 
-targets for a seed, one target will be selected for combination. Target 
-selection probability is simulated using the distance between seed and target. 
-The smaller the distance, the larger the probability.
+  \item{maxSRCRLen}{
+Maximum length of the short reverse complementary regions. Unit: base pair (bp).
 }
-  \item{sameStrandProb}{
-Probability of seed and target from the same DNA strand (same strand 
-ss-DNA combination / same or complementary strand ss-DNA combination). Only 
-valid for adjacent ss-DNA combination. For paired end sequencing, the larger the 
-probability, the greater the proportion of improperly paired reads with LL / RR 
-pair orientation, and the smaller with RL pair orientation. Range: 0 to 1.
+  \item{meanLogSRCRDist}{
+Mean of log scaled original genomic distance of the short reverse complementary 
+regions(SRCR) in artifact chimeric fragments. SRCRs links two ss-DNA together, 
+yielding artifact chimeric fragments. The distance of SRCR is the original 
+genomic distance between the two short reverse complementary segments, which 
+follows a log-normal distribution in simulation. For log-normal distribution, 
+see \code{\link[stats]{rlnorm}} for more details. Unit: base pair (bp).
+}
+  \item{sdLogSRCRDist}{
+Standard deviation of log scaled original genomic distance of the short reverse 
+complementary regions(SRCR) in artifact chimeric fragments.
+}
+  \item{distWinLen}{
+The window length used in distant ss-DNA simulation. To simulate distant 
+ss-DNA combinations, the short reverse complementary regions(SRCR) are searched 
+between different windows. Unit: base pair (bp).
 }
   \item{spikeWidth}{
 The width of chimeric read spike used to simulate distant ss-DNA combinations. 
@@ -136,14 +145,22 @@ shaped beta distribution. Use this parameter to adjust the shape of the curve.
 See \code{\link[stats]{rbeta}} for more details. Range: 0-1.
 }
   \item{sameTarRegionProb}{
-Probability of neighboring seeds to search targets in same random region for 
-distant ss-DNA combination simulation. The larger the value, the more the false 
-positive translocation variants.
+Probability of two distant ss-DNA combination events coming from the same two 
+different windows.
+}
+  \item{adjFactor}{
+Increase this value if the number of simulated adjacent chimeric reads is 
+smaller than expected (sameChrProp * adjChimProp), decrease if the opposite is 
+true.
+}
+  \item{distFactor}{
+Increase this value if the number of simulated distant chimeric reads is smaller 
+than expected, decrease if the opposite is true.
 }
   \item{chimMutRate}{
 Mutation rate for each base in chimeric fragments. In the chimeric fragment 
 formation process, biological-level errors might occur and lead to mutations on 
-these artificial fragments. For all four basic types of nucleotides, the 
+these artifact fragments. For all four basic types of nucleotides, the 
 substitution probability is set equal. Range: 0-0.75.
 }
   \item{noiseRate}{
@@ -156,8 +173,8 @@ A second noise rate for each base in reads. In some real sequencing data,
 some reads are much more noisy than others. This parameter can be used for this 
 situation. Range: 0-0.75.
 }
-  \item{highNoiseProb}{
-Probability of reads to be simulated with highNoiseRate other than noiseRate.
+  \item{highNoiseProp}{
+Proportion of reads to be simulated with highNoiseRate other than noiseRate.
 Range: 0-1.
 }
   \item{pairedEnd}{
@@ -170,11 +187,11 @@ merged, please make sure that they have different prefixes.
   \item{threads}{
 Number of threads used. Multi-threading can speed up the process.
 }
-  \item{localChimeric}{
+  \item{adjChimeric}{
 Generate reads from adjacent ss-DNA combinations if it is set to true. If it is 
 set to false, skip this process.
 }
-  \item{distantChimeric}{
+  \item{distChimeric}{
 Generate reads from distant ss-DNA combinations if it is set to true. If it is
 set to false, skip this process.
 }
@@ -183,24 +200,28 @@ Generate reads from normal fragments if it is set to true. If it is set to
 false, skip this process.
 }
   \item{overWrite}{
-Overwrite the file if file with same output path exists and it is set to true.
-If file with same output path exists and it is set to false, reads will be
+Overwrite the file if file with the same output path exists and it is set to 
+true. If file with same output path exists and it is set to false, reads will be
 appended to the existing file.
 }
 }
 \details{
-The NGS (Next-Generation Sequencing) reads from FFPE
-(Formalin-Fixed Paraffin-Embedded) samples contain numerous artificial chimeric
-reads. These reads are derived from the combination of two single-stranded DNA 
-(ss-DNA) fragments with short reverse complementary sequences. This function 
-simulates these artificial reads as well as normal reads for FFPE samples 
-within defined regions. The combined ss-DNA may come from adjacent or distant 
-regions. In the output fastq file these reads are distinguished by prefixes 
-"localChimeric", "distantChimeric" and "Normal" in their names. The parameter 
-PhredScoreProfile can be calculated by the function
-\code{\link{calcPhredScoreProfile}}. To simulate whole genome sequencing (WGS) 
-or to simulate reads on several large regions / full chromosomes, please use the 
-function \code{\link{readSimFFPE}}.
+The NGS (Next-Generation Sequencing) reads from FFPE (Formalin-Fixed 
+Paraffin-Embedded) samples contain numerous artifact chimeric reads (ACRs), 
+which can lead to false positive structural variant calls. These ACRs are 
+derived from the combination of two single-stranded DNA (ss-DNA) fragments with 
+short reverse complementary regions (SRCRs). This function simulates these 
+artifact chimeric reads as well as normal reads for FFPE samples within defined 
+regions. To simplify the simulation, the genome is divided into small windows, 
+and SRCRs are found within the same window (adjacent ss-DNA combination) or 
+between different windows (distant ss-DNA simulation). For adjacent ss-DNA 
+combination events, the original genomic distance between and strands of two 
+combined SRCRs are also simulated based on real data. In the output fastq file, 
+reads are distinguished by prefixes "adjChimeric", "distChimeric" and "Normal" 
+in their names. The parameter PhredScoreProfile can be calculated by the 
+function \code{\link{calcPhredScoreProfile}}. To simulate whole genome 
+sequencing (WGS) or to simulate reads on several large regions / full 
+chromosomes, please use the function \code{\link{readSimFFPE}}.
 }
 \value{
 NULL. Reads will be written to the output FASTQ file.
@@ -221,10 +242,8 @@ for the guidance of fine-tuning.
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
                                       package = "SimFFPE")
 PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
-colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
-                                          nrows = 1, 
-                                          colClasses = "character")
-
+colnames(PhredScoreProfile)  <- 
+    strsplit(readLines(PhredScoreProfilePath)[1], "\t")[[1]]
 referencePath <- system.file("extdata", "example.fasta", package = "SimFFPE")
 
 regionPath <- system.file("extdata", "regionsSim.txt", package = "SimFFPE")

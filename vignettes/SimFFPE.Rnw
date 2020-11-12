@@ -10,7 +10,7 @@ BiocStyle::latex()
 
 \title{An Introduction to \Biocpkg{SimFFPE}}
 \author{Lanying Wei}
-\date{Modified: March 12, 2020. Compiled: \today}
+\date{Modified: Nov 11, 2020. Compiled: \today}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
@@ -28,17 +28,17 @@ options(width=60)
 
 \section{Introduction}
 
-The NGS (Next-Generation Sequencing) reads from FFPE
-(Formalin-Fixed Paraffin-Embedded) samples contain numerous artificial chimeric
-reads. These reads are derived from the combination of two single-stranded DNA 
-(ss-DNA) fragments with short reverse complementary sequences. The combined 
-ss-DNA may come from adjacent or distant regions. The \Biocpkg{SimFFPE} package 
-simulates these artificial reads as well as normal reads for FFPE samples. The 
-simulation can cover whole genome, or several chromosomes, or large regions, or 
-whole exome, or targeted regions. It also supports enzymatic / random 
-fragmentation and paired-end / single-end sequencing simulations. Fine-tuning 
-can be performed for desired simulation results, and multi-threading can help 
-reduce the runtime.
+The NGS (Next-Generation Sequencing) reads from FFPE (Formalin-Fixed 
+Paraffin-Embedded) samples contain numerous artificial chimeric reads, which can 
+lead to false positive structural variant calls.  These  ACRs are 
+derived from the combination of two single-stranded DNA (ss-DNA) fragments with 
+short reverse complementary regions (SRCR). The combined ss-DNA may come from 
+adjacent or distant genomic regions. The \Biocpkg{SimFFPE} package simulates 
+these artificial reads as well as normal reads for FFPE samples. The simulation 
+can cover whole genome, or several chromosomes, or large regions, or whole 
+exome, or targeted regions. It also supports enzymatic / random fragmentation 
+and paired-end / single-end sequencing simulations.Fine-tuning can be achieved 
+by adjusting the parameters, and multi-threading is surported. 
 
 \section{Input}
 
@@ -60,18 +60,16 @@ PhredScoreProfile <- calcPhredScoreProfile(bamFilePath, targetRegions = regions)
 PhredScoreProfilePath <- system.file("extdata", "PhredScoreProfile1.txt",
                                       package = "SimFFPE")
 PhredScoreProfile <- as.matrix(read.table(PhredScoreProfilePath, skip = 1))
-colnames(PhredScoreProfile) <- read.table(PhredScoreProfilePath, 
-                                          nrows = 1, 
-                                          colClasses = "character")
+colnames(PhredScoreProfile)  <- 
+    strsplit(readLines(PhredScoreProfilePath)[1], "\t")[[1]]
 #
 ## Example Phred score profile with 150 read length
 
 PhredScoreProfilePath2 <- system.file("extdata", "PhredScoreProfile2.txt",
                                       package = "SimFFPE")
 PhredScoreProfile2 <- as.matrix(read.table(PhredScoreProfilePath2, skip = 1))
-colnames(PhredScoreProfile2) <- read.table(PhredScoreProfilePath2, 
-                                           nrows = 1, 
-                                           colClasses = "character")
+colnames(PhredScoreProfile2)  <- 
+    strsplit(readLines(PhredScoreProfilePath2)[1], "\t")[[1]]
 
 @
 
@@ -102,12 +100,12 @@ targetRegions <- read.table(regionPath)
 
 The simulation includes three steps: 1) Simulate artificial chimeric reads
 derived from the combination of two ss-DNA segments from adjacent regions on the
-chromosome. 2) Simulate artificial chimeric reads derived
-from the combination of two ss-DNA from distant regions (distant regions
-on the same chromosome, or any regions on different chromosomes). 3) Simulate
-reads derived from normal sequences. You can also skip any of these steps in the
-simulation. There are two functions which can be used for the simulation:
-\Rfunction{readSimFFPE} and \Rfunction{targetReadSimFFPE}.
+chromosome. 2) Simulate artificial chimeric reads derived from the combination 
+of two ss-DNA from distant regions (distant regions on the same chromosome, or 
+any regions on different chromosomes). 3) Simulate reads derived from normal 
+sequences. You can also skip any of these steps in the simulation. There are two 
+functions which can be used for the simulation: \Rfunction{readSimFFPE} and 
+\Rfunction{targetReadSimFFPE}.
 
 \subsection{Read simulation functions}
 
@@ -120,7 +118,7 @@ sourceSeq <- reference[1:3]
 outFile1 <- paste0(tempdir(), "/sim1")
 readSimFFPE(sourceSeq, referencePath, PhredScoreProfile2, outFile1,
             overWrite = TRUE, coverage = 80, readLen = 150,
-            enzymeCut = TRUE, threads = 4)
+            enzymeCut = TRUE, threads = 2)
 #
 ## Simulate reads of defined regions on the first two sequences of
 ## the reference genome
@@ -159,32 +157,32 @@ parameters, screenshots from IGV tools are used (see Figure \ref{fig:1},
 chimeric read pairs with improper pair orientations might be mapped to exactly 
 the same location on the reference genome (see Figure \ref{fig:1}).
 
-2) chimericRatio: Proportion of artificial chimeric reads. The higher the 
+2) chimericProp: Proportion of artificial chimeric fragments. The higher the 
 value, the greater the proportion of improper paired reads as shown in Figure 
 \ref{fig:1} and \ref{fig:2}, the smaller the proportion of proper paired reads 
 as shown in Figure \ref{fig:3}, and the larger the proportion of proper paired 
 reads with soft-clips as shown in Figure \ref{fig:3}.
 
-3) localMatchRatio: Proportion of chimeric reads that are formed by the
-combination of two adjacent ss-DNA. The higher the value, the greater the
-proportion of reads with improper pair orientations as shown in Figure
-\ref{fig:1}, and the smaller the proportion of reads with their mates mapped to
-different chromosomes as shown in Figure \ref{fig:2}.
+3) sameChrProp: Proportion of artifact chimeric fragments that are derived from 
+the combination of two ss-DNA coming from the same chromosome. The higher the 
+value, the greater the proportion of reads with improper pair orientations as
+shown in Figure \ref{fig:1}, and the smaller the proportion of reads with their 
+mates mapped to different chromosomes as shown in Figure \ref{fig:2}.
 
-4) sameStrandProb: Probability of seed and target coming from the same DNA 
-strand in adjacent ss-DNA combination simulation. The higher the value, the 
-greater the proportion of reads with RR and LL orientations in all reads with 
-improper pair orientations as shown in Figure \ref{fig:1}.
+4) adjChimProp: Proportion of adjacent ss-DNA combinations among same 
+chromosomal ss-DNA combinations. sameChrProp * adjChimProp determine the
+proportion of simulated adjcent ss-DNA combinations.
 
-5) spikeWidth: The width of chimeric read spike used in the simulation of 
+5) sameStrandProb: Proportion of same-strand ss-DNA combinations among adjacent 
+ss-DNA combinations. The higher the value, the greater the proportion of reads 
+with RR and LL orientations in all reads with improper pair orientations as 
+shown in Figure \ref{fig:1}.
+
+6) spikeWidth: The width of chimeric read spike used in the simulation of 
 distant ss-DNA combinations. As shown in Figure \ref{fig:3}, some regions 
 are enriched in reads with paired reads mapped to other chromosomes, and some 
 others are scarce. The lengths of these regions are of similar scale, and the 
 parameter "spikeWidth" is used to simulate this length.
-
-6) sameTarRegionProb: Probability of neighboring seeds to search targets in 
-same random region for distant ss-DNA combination simulation. The larger the 
-value, the more the false positive translocation variants.
 
 7) highNoiseRate and highNoiseProb: The noise rate for each base in noisy reads 
 and the proportion of these noisy reads. These very noisy reads as well as less 

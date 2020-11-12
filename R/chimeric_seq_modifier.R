@@ -29,12 +29,12 @@ generateEnzymicCutSeq <- function(sourceSeq, targetSeq, sourceSeqMapStart,
         sourceFragLen <- round(runif(1) * (fragLen - mapLen))
         targetFragLen <- fragLen - mapLen - sourceFragLen
     }
-
+    
     sourceFragStart <- sourceSeqMapStart - sourceFragLen
     sourceFragEnd <- sourceSeqMapStart + mapLen - 1
     targetFragStart <- targetSeqMapStart + mapLen
     targetFragEnd <- targetSeqMapStart + mapLen + targetFragLen - 1
-
+    
     chimericSeq <- NULL
     if (sourceFragStart > 0 && sourceFragEnd <= length(sourceSeq) &&
         targetFragStart > 0 && targetFragEnd <= length(targetSeq)) {
@@ -45,7 +45,7 @@ generateEnzymicCutSeq <- function(sourceSeq, targetSeq, sourceSeqMapStart,
     return (chimericSeq)
 }
 
-addRandomMutation <- function (seqs, mutationRate) {
+addRandomMutation <- function(seqs, mutationRate) {
     mutationRate <- mutationRate / 0.75
     width <- width(seqs)
     maxWidth <- max(width)

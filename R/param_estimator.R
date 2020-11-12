@@ -20,7 +20,7 @@ findReads <- function(bamFile,
                       mapqFilter=0) {
 
     f <- scanBamFlag(isDuplicate = FALSE,
-                     isSupplementaryAlignment = isSupplementary,)
+                     isSupplementaryAlignment = isSupplementary)
 
     p <- ScanBamParam(flag = f,
                       tag = tag,
@@ -44,6 +44,9 @@ calcPhredScoreProfile <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
     
     bamFile <- BamFile(bamFilePath)
     seqInfo <- scanBamHeader(bamFile)$targets
+    
+    colnames(targetRegions) <- c("chr", "start", "end")
+    targetRegions <- targetRegions[targetRegions$chr %in% names(seqInfo), ]
     
     if (length(targetRegions) != 0 & is(targetRegions, "GenomicRanges")) {
         targetRegions <- data.frame(seqnames(targetRegions), 
@@ -104,13 +107,13 @@ calcPhredScoreProfile <- function(bamFilePath, mapqFilter=0, maxFileSize=1,
             }
             regions <- sort(subsampleRegions)
         } else {
-            colnames(targetRegions) <- c("chr", "start", "end")
             regions <- GRanges(targetRegions$chr, IRanges(targetRegions$start,
                                                           targetRegions$end))
             regions <- regions[sample(seq_along(regions),
                                       round(length(regions) * subsampleRatio))]
         }
     }
+    
     message("Get reads from BAM file in ", length(regions), " regions.", 
             "\nUsing ", threads, " thread(s).")
     cl <- makeCluster(threads)

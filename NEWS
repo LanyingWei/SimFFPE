@@ -1,3 +1,13 @@
 Changes in version 0.99.0 (2019-12-12)
 + Submitted to Bioconductor
-
+Changes in version 1.2.0 (2020-10-12)
++ Modified defaults based on publicaly available FFPE samples
+Changes in version 1.4.0 (2020-11-11)
++ Speed up
++ Modified more defaults based on publicaly available FFPE samples
++ Added new parameter sameChrProp for a better simulation
++ Modified the model of SRCR distance for adjcent ss-DNA combination: 
+  from normal distribution to log-normal distribution
++ Renaming of parameters
++ Fixed the bug of producing chimeric reads without SRCR
++ Fixed the bug of producing read duplicates at low coverage

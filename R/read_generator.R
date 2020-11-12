@@ -1,5 +1,5 @@
 generateReads <- function(seqs, readLen, pairedEnd, noiseRate,
-                          highNoiseRate, highNoiseProb) {
+                          highNoiseRate, highNoiseProp) {
     noiseRate <- noiseRate / 0.75
     highNoiseRate <- highNoiseRate / 0.75
     revComp <- reverseComplement(seqs)
@@ -20,17 +20,19 @@ generateReads <- function(seqs, readLen, pairedEnd, noiseRate,
         if (nReads > 0) {
             noiseRates <- rep(noiseRate, length(reads))
             noiseRates[sample(seq_len(nReads),
-                              size = nReads * highNoiseProb,
+                              size = nReads * highNoiseProp,
                               replace = TRUE)] <- highNoiseRate
             reads <- addNoise(reads, noiseRates=noiseRates, readLen = readLen)
             reads <- as.character(reads)
-            mid <- nReads / 2
-            mid2 <- round(mid / 2)
-            reads1 <- c(rbind(reads[seq_len(mid2)],
-                              reads[(mid + 1):(mid + mid2)]))
-            reads2 <- c(rbind(reads[(mid + mid2 + 1):nReads],
-                              reads[(mid2 + 1):mid]))
-            reads <- c(reads1, reads2)
+            if (nReads > 2) {
+                mid <- nReads / 2
+                mid2 <- round(mid / 2)
+                reads1 <- c(rbind(reads[seq_len(mid2)],
+                                  reads[(mid + 1):(mid + mid2)]))
+                reads2 <- c(rbind(reads[(mid + mid2 + 1):nReads],
+                                  reads[(mid2 + 1):mid]))
+                reads <- c(reads1, reads2)
+            }
             return(reads)
         }
 
@@ -47,7 +49,7 @@ generateReads <- function(seqs, readLen, pairedEnd, noiseRate,
         if (nReads > 0) {
             noiseRates <- rep(noiseRate, length(reads))
             noiseRates[sample(seq_len(nReads),
-                              size = nReads * highNoiseProb,
+                              size = nReads * highNoiseProp,
                               replace = TRUE)] <- highNoiseRate
             reads <- addNoise(reads, noiseRates=noiseRates, readLen = readLen)
             reads <- as.character(reads)
@@ -77,7 +79,7 @@ addNoise <- function (reads, noiseRates, readLen) {
 
 generateNormalReads <- function(fullSeq, nSeq, meanInsertLen, sdInsertLen,
                                 readLen, noiseRate, highNoiseRate,
-                                highNoiseProb, pairedEnd) {
+                                highNoiseProp, pairedEnd) {
 
 
     starts <- sample(seq_len(length(fullSeq) - meanInsertLen + 1),
@@ -114,7 +116,7 @@ generateNormalReads <- function(fullSeq, nSeq, meanInsertLen, sdInsertLen,
         if (nReads > 0) {
             noiseRates <- rep(noiseRate, length(reads))
             noiseRates[sample(seq_len(nReads),
-                              size = nReads * highNoiseProb,
+                              size = nReads * highNoiseProp,
                               replace = TRUE)] <- highNoiseRate
             reads <- addNoise(reads, noiseRates=noiseRates, readLen = readLen)
             reads <- as.character(reads)
@@ -145,7 +147,7 @@ generateNormalReads <- function(fullSeq, nSeq, meanInsertLen, sdInsertLen,
         if (nReads > 0) {
             noiseRates <- rep(noiseRate, length(reads))
             noiseRates[sample(seq_len(nReads),
-                              size = nReads * highNoiseProb,
+                              size = nReads * highNoiseProp,
                               replace = TRUE)] <- highNoiseRate
             reads <- addNoise(reads, noiseRates=noiseRates, readLen = readLen)
             reads <- as.character(reads)

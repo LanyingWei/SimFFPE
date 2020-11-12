@@ -1,14 +1,17 @@
 readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
                         coverage, readLen=150, meanInsertLen=250, 
-                        sdInsertLen=80, enzymeCut=FALSE, chimericRatio=0.08, 
-                        localMatchRatio=0.1, windowLen=10000, matchWinLen=10000,
-                        meanLogSeedLen=1.7, sdLogSeedLen=0.4, seedPassRate=0.78, 
-                        sdTargetDist=120, sameStrandProb=0.5, spikeWidth = 1500, 
+                        sdInsertLen=80, enzymeCut=FALSE, chimericProp=0.1, 
+                        sameChrProp=0.43, windowLen=5000, adjChimProp=0.63, 
+                        sameStrandProp=0.65, meanLogSRCRLen=1.8, 
+                        sdLogSRCRLen=0.55, maxSRCRLen=32,
+                        meanLogSRCRDist=4.7, sdLogSRCRDist=0.35, 
+                        distWinLen=5000, spikeWidth = 1500, 
                         betaShape1=0.5, betaShape2=0.5, sameTarRegionProb=0,
-                        chimMutRate=0.005, noiseRate=0.0015,
-                        highNoiseRate=0.08, highNoiseProb=0.015,
+                        adjFactor=1.65, distFactor=1.65, 
+                        chimMutRate=0.003, noiseRate=0.0015,
+                        highNoiseRate=0.08, highNoiseProp=0.01,
                         pairedEnd=TRUE, prefix="SimFFPE", threads=1,
-                        localChimeric=TRUE, distantChimeric=TRUE,
+                        adjChimeric=TRUE, distChimeric=TRUE,
                         normalReads=TRUE, overWrite=FALSE) {
     
     if(missing(sourceSeq)) stop("sourceSeq is required")
@@ -32,32 +35,18 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
         overWriteFastq(outFile = outFile, pairedEnd = pairedEnd)
     }
     
-    covFFPE <- coverage * chimericRatio / seedPassRate
-    covNorm <- coverage * (1 - chimericRatio)
-    
-    if(pairedEnd) {
-        nSeedRegional <-
-            round(covFFPE * localMatchRatio * windowLen / readLen / 2)
-    } else {
-        enzymeCut <- FALSE
-        nSeedRegional <- round(covFFPE * localMatchRatio * windowLen / readLen)
-    }
+    covFFPE <- coverage * chimericProp
+    covNorm <- coverage * (1 - chimericProp)
+    adjChimProp <- sameChrProp * adjChimProp
+    sameStrandProp <- sameStrandProp * 1.05
     
     reference <- readDNAStringSet(referencePath)
-    reference <- reference[width(reference) >= matchWinLen]
+    reference <- reference[width(reference) >= distWinLen]
     
     names(reference) <- unlist(lapply(names(reference),
                                       function(x) strsplit(x, " ")[[1]][1]))
     names(sourceSeq) <- unlist(lapply(names(sourceSeq),
                                       function(x) strsplit(x, " ")[[1]][1]))
-    
-    if (distantChimeric) {
-        allChr <- names(reference)
-        totalLen <- do.call("sum", lapply(reference, length))
-        chrProb <- unlist(lapply(reference, length)) / totalLen
-    }
-    reference <- NULL
-    
     nReadsLocal <- 0
     nReadsDistant <- 0
     nReadsNorm <- 0
@@ -70,11 +59,37 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
         chr <- names(sourceSeq)[i]
         message("Simulating FFPE reads on the chromosome ", chr, "...")
         fullSeq <- sourceSeq[[i]]
-        if (localChimeric) {
+        
+        if (adjChimeric) {
+            startPoses <- seq(1, length(fullSeq), by=windowLen)
+            endPoses <- startPoses + windowLen - 1
+            endPoses[length(endPoses)] <- length(fullSeq)
+            if(pairedEnd) {
+                nSeedsAll <- round(covFFPE * adjChimProp  * adjFactor * 
+                                       length(fullSeq) / readLen / 2)
+            } else {
+                enzymeCut <- FALSE
+                nSeedsAll <- round(covFFPE * adjChimProp  * adjFactor * 
+                                       length(fullSeq) / readLen)
+            }
+            
+            nSeedsRegional <- floor(nSeedsAll / length(startPoses))
+            nSeeds <- rep(nSeedsRegional, length(startPoses))
+            restSeeds <- nSeedsAll - sum(nSeeds)
+            nSeeds[length(startPoses)] <- 
+                round(nSeedsRegional / windowLen * 
+                          (length(fullSeq) - startPoses[length(startPoses)]+1))
+            tmp <- sample(seq_along(startPoses), restSeeds)
+            nSeeds[tmp] <- nSeeds[tmp] + 1
+
             startPos <- NULL
+            endPos <- NULL
+            nSeed <- NULL
+
             simReads <-
-                foreach(startPos = seq(1, length(fullSeq),
-                                       by=windowLen),
+                foreach(startPos = startPoses,
+                        endPos = endPoses,
+                        nSeed = nSeeds,
                         .combine = "c",
                         .inorder = TRUE,
                         .verbose = FALSE,
@@ -89,13 +104,13 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
                                     "rtruncnorm")
                 ) %dopar% {
                     generateRegionalChimericReads(
-                        fullSeq = fullSeq,
-                        startPos = startPos,
-                        windowLen = windowLen,
-                        nSeed = nSeedRegional,
-                        meanLogSeedLen = meanLogSeedLen,
-                        sdLogSeedLen = sdLogSeedLen,
-                        sdTargetDist = sdTargetDist,
+                        seq = fullSeq[startPos:endPos],
+                        nSeed = nSeed,
+                        meanLogSRCRLen = meanLogSRCRLen,
+                        sdLogSRCRLen = sdLogSRCRLen,
+                        maxSRCRLen=maxSRCRLen,
+                        meanLogSRCRDist = meanLogSRCRDist,
+                        sdLogSRCRDist = sdLogSRCRDist,
                         meanInsertLen = meanInsertLen,
                         sdInsertLen = sdInsertLen,
                         enzymeCut = enzymeCut,
@@ -103,36 +118,46 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
                         chimMutRate = chimMutRate,
                         noiseRate = noiseRate,
                         highNoiseRate = highNoiseRate,
-                        highNoiseProb = highNoiseProb,
+                        highNoiseProp = highNoiseProp,
                         pairedEnd = pairedEnd,
-                        sameStrandProb = sameStrandProb)
+                        sameStrandProp = sameStrandProp)
                 }
             
             readsToFastq(simReads = simReads,
                          PhredScoreProfile = PhredScoreProfile,
                          prefix = prefix,
-                         prefix2 = "localChimeric",
+                         prefix2 = "adjChimeric",
                          chr = chr,
                          pairedEnd = pairedEnd,
                          outFile = outFile,
                          threads = threads)
-            message("Generated ", length(simReads), " local chimeric reads ",
+            message("Generated ", length(simReads), " adjacent chimeric reads ",
                     "on chromosome ", chr, ".")
             nReadsLocal <- nReadsLocal + length(simReads)
             simReads <- NULL
         }
         
-        if (distantChimeric) {
+        if (distChimeric) {
+            
+            allChr <- names(reference)
+            totalLen <- do.call("sum", lapply(reference, length))
+            chrProb <- unlist(lapply(reference, length)) / totalLen
+            tmpProb <- (sameChrProp - adjChimProp) / (1 - adjChimProp)
+            chrProb[chr] <- 0
+            chrProb <- chrProb / sum(chrProb) * (1 - tmpProb)
+            chrProb[chr] <- tmpProb
+            
             if (pairedEnd) {
-                nSeedDistant <- round(covFFPE * (1 - localMatchRatio) *
+                nSeedDistant <- round(covFFPE * (1 - adjChimProp) * distFactor *
                                           length(fullSeq) / readLen / 2)
             } else {
-                nSeedDistant <- round(covFFPE * (1 - localMatchRatio) *
+                nSeedDistant <- round(covFFPE * (1 - adjChimProp) * distFactor *
                                           length(fullSeq) / readLen)
             }
             
-            if (nSeedDistant > 1e+6) {
-                distWindow <- round(length(fullSeq) / (nSeedDistant / 1e+6))
+            
+            if (nSeedDistant > 1e+4) {
+                distWindow <- round(length(fullSeq) / (nSeedDistant / 1e+4))
                 nTimes <- ceiling(length(fullSeq) / distWindow / threads)
                 nSeedDistant <- 
                     round(nSeedDistant *  distWindow / length(fullSeq))
@@ -168,10 +193,11 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
                             referencePath = referencePath,
                             startPos = startPos,
                             windowLen = distWindow,
-                            matchWinLen = matchWinLen,
+                            distWinLen = distWinLen,
                             nSeed = nSeedDistant,
-                            meanLogSeedLen = meanLogSeedLen,
-                            sdLogSeedLen = sdLogSeedLen,
+                            meanLogSRCRLen = meanLogSRCRLen,
+                            sdLogSRCRLen = sdLogSRCRLen,
+                            maxSRCRLen = maxSRCRLen,
                             meanInsertLen = meanInsertLen,
                             sdInsertLen = sdInsertLen,
                             readLen = readLen,
@@ -180,19 +206,19 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
                             chimMutRate = chimMutRate,
                             noiseRate = noiseRate,
                             highNoiseRate = highNoiseRate,
-                            highNoiseProb = highNoiseProb,
+                            highNoiseProp = highNoiseProp,
                             pairedEnd = pairedEnd,
                             spikeWidth = spikeWidth,
                             betaShape1 = betaShape1,
                             betaShape2 = betaShape2,
                             sameTarRegionProb = sameTarRegionProb,
-                            sameStrandProb= 0.5)
+                            sameStrandProp= 0.5)
                     }
                 
                 readsToFastq(simReads = simReads,
                              PhredScoreProfile = PhredScoreProfile,
                              prefix = prefix,
-                             prefix2 = "distantChimeric",
+                             prefix2 = "distChimeric",
                              chr = chr,
                              firstID = firstID,
                              pairedEnd = pairedEnd,
@@ -250,7 +276,7 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
                         readLen = readLen,
                         noiseRate = noiseRate,
                         highNoiseRate = highNoiseRate,
-                        highNoiseProb = highNoiseProb,
+                        highNoiseProp = highNoiseProp,
                         pairedEnd = pairedEnd)
                 }
                 
@@ -279,9 +305,18 @@ readSimFFPE <- function(sourceSeq, referencePath, PhredScoreProfile, outFile,
     
     stopCluster(cl)
     
-    message("In totoal ", nReadsLocal, " local chimeric reads, ",
+    message("In totoal ", nReadsLocal, " adjacent chimeric reads, ",
             nReadsDistant, " distant chimeric reads, ",
             nReadsNorm, " normal reads were generated.",
             "\nAlltogether ", nReadsLocal + nReadsDistant + nReadsNorm,
-            " reads were generated.", "\nSimulation done.")
+            " reads were generated. ", nReadsLocal + nReadsDistant, 
+            " reads (", round((nReadsLocal + nReadsDistant) / 
+                                  (nReadsLocal + nReadsDistant + nReadsNorm), 
+                              4) * 100, 
+            "%, adjusted by chimericProp) are artifact chimeric reads.",
+            "\nOf all artifact chimeric reads, ", nReadsLocal, " reads (",
+            round(nReadsLocal / (nReadsLocal + nReadsDistant), 4) * 100,
+            "%, adjusted by sameChrProp * adjChimProp)",
+            " are adjacent chimeric reads.",
+            "\nSimulation done.")
 }
