@@ -2,7 +2,7 @@ Changes in version 0.99.0 (2019-12-12)
 + Submitted to Bioconductor
 Changes in version 1.2.0 (2020-10-12)
 + Modified defaults based on publicaly available FFPE samples
-Changes in version 1.4.0 (2020-11-11)
+Changes in version 1.3.1 (2020-11-11)
 + Speed up
 + Modified more defaults based on publicaly available FFPE samples
 + Added new parameter sameChrProp for a better simulation

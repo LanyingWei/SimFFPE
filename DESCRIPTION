@@ -1,7 +1,7 @@
 Package: SimFFPE
 Type: Package
 Title: NGS Read Simulator for FFPE Tissue
-Version: 1.4.0
+Version: 1.3.1
 Authors@R: person("Lanying", "Wei", email="lanying.wei@uni-muenster.de",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4281-8017"))
 Description: The NGS (Next-Generation Sequencing) reads from FFPE 
