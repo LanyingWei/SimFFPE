@@ -23,8 +23,7 @@ generateRegionalChimericSeqs <- function(seq, nSeed, meanLogSRCRLen,
             SRCRLen <- SRCRLen[SRCRLen > 0 & SRCRLen <= maxSRCRLen]
         }
         SRCRLen <- SRCRLen[seq_len(nSeed)]
-        
-                            (length(seq) - targetPadding - max(SRCRLen) + 1),
+        start <- sample(1:(length(seq) - targetPadding - max(SRCRLen) + 1),
                         nSeed, replace = TRUE)
         revSeq <- reverse(seq)
         compSeq <- complement(seq)
